@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: housing-owner-tenant-postgres
+    environment:
+      POSTGRES_DB: housing_owner_tenant
+      POSTGRES_USER: housing
+      POSTGRES_PASSWORD: housing
+      TZ: UTC
+    ports:
+      - "55432:5432"
+    volumes:
+      - housing-owner-tenant-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U housing -d housing_owner_tenant"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # P4 — Enterprise cache (Redis L2, shared across pods)
+  redis:
+    image: redis:7-alpine
+    container_name: housing-owner-tenant-redis
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "56379:6379"
+    volumes:
+      - housing-owner-tenant-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  housing-owner-tenant-postgres:
+  housing-owner-tenant-redis:

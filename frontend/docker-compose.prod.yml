@@ -1,0 +1,17 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: housing-owner-tenant-web-app
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3001}:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://api.rentandbeyond.example.com}
+      API_BASE_URL_INTERNAL: ${API_BASE_URL_INTERNAL:-http://host.docker.internal:8080}
+      HOSTNAME: ${HOSTNAME:-0.0.0.0}
+      PORT: ${PORT:-3000}
+      NODE_ENV: production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

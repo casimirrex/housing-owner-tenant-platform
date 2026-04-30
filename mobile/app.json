@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "Rent and Beyond",
+    "slug": "housing-owner-tenant-mobile-app",
+    "scheme": "rentandbeyond",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "assetBundlePatterns": ["**/*"],
+    "platforms": ["ios", "android", "web"]
+  }
+}
