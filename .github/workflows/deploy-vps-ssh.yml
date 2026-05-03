@@ -1,0 +1,124 @@
+name: Deploy to VPS over SSH
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build production bundle
+        run: |
+          tar \
+            --exclude='.git' \
+            --exclude='housing-owner-tenant-platform.tgz' \
+            --exclude='frontend/node_modules' \
+            --exclude='frontend/.next' \
+            --exclude='backend/target' \
+            --exclude='mobile/node_modules' \
+            -czf housing-owner-tenant-platform.tgz .
+
+      - name: Deploy over SSH
+        env:
+          VPS_SSH_HOST: ${{ secrets.VPS_SSH_HOST }}
+          VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT }}
+          VPS_SSH_USER: ${{ secrets.VPS_SSH_USER }}
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_SSH_PASSWORD: ${{ secrets.VPS_SSH_PASSWORD }}
+          HOSTINGER_VPS_IP: ${{ secrets.HOSTINGER_VPS_IP }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+
+          : "${VPS_SSH_HOST:?Missing VPS_SSH_HOST secret}"
+          : "${VPS_SSH_USER:?Missing VPS_SSH_USER secret}"
+          : "${HOSTINGER_VPS_IP:?Missing HOSTINGER_VPS_IP secret}"
+          : "${DB_PASSWORD:?Missing DB_PASSWORD secret}"
+          : "${GOOGLE_OAUTH_CLIENT_ID:?Missing GOOGLE_OAUTH_CLIENT_ID secret}"
+          : "${GOOGLE_OAUTH_CLIENT_SECRET:?Missing GOOGLE_OAUTH_CLIENT_SECRET secret}"
+
+          VPS_SSH_PORT="${VPS_SSH_PORT:-22}"
+          remote="${VPS_SSH_USER}@${VPS_SSH_HOST}"
+
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          ssh-keyscan -p "$VPS_SSH_PORT" -H "$VPS_SSH_HOST" >> "$HOME/.ssh/known_hosts"
+
+          if [ -n "${VPS_SSH_PRIVATE_KEY:-}" ]; then
+            printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > "$HOME/.ssh/vps_deploy_key"
+            chmod 600 "$HOME/.ssh/vps_deploy_key"
+            SSH_CMD=(ssh -i "$HOME/.ssh/vps_deploy_key" -p "$VPS_SSH_PORT")
+            SCP_CMD=(scp -i "$HOME/.ssh/vps_deploy_key" -P "$VPS_SSH_PORT")
+          elif [ -n "${VPS_SSH_PASSWORD:-}" ]; then
+            sudo apt-get update
+            sudo apt-get install -y sshpass
+            export SSHPASS="$VPS_SSH_PASSWORD"
+            SSH_CMD=(sshpass -e ssh -p "$VPS_SSH_PORT")
+            SCP_CMD=(sshpass -e scp -P "$VPS_SSH_PORT")
+          else
+            echo "Missing VPS_SSH_PRIVATE_KEY or VPS_SSH_PASSWORD secret."
+            exit 1
+          fi
+
+          umask 077
+          cat > deploy.env <<EOF
+          NODE_ENV=production
+          FRONTEND_DOMAIN=frontend.${HOSTINGER_VPS_IP}.nip.io
+          BACKEND_DOMAIN=backend.${HOSTINGER_VPS_IP}.nip.io
+          GOOGLE_OAUTH_ALLOWED_REDIRECT_URIS=https://frontend.${HOSTINGER_VPS_IP}.nip.io/account/login/gmail,https://frontend.${HOSTINGER_VPS_IP}.nip.io/account/register/gmail,https://frontend.${HOSTINGER_VPS_IP}.nip.io/rest/oauth2-credential/callback
+          DB_PASSWORD=${DB_PASSWORD}
+          GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
+          GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
+          GOOGLE_OAUTH_ALLOWED_CLIENT_IDS=${GOOGLE_OAUTH_CLIENT_ID}
+          EOF
+
+          "${SCP_CMD[@]}" housing-owner-tenant-platform.tgz "$remote:/tmp/housing-owner-tenant-platform.tgz"
+          "${SCP_CMD[@]}" deploy.env "$remote:/tmp/housing-owner-tenant-platform.env"
+
+          "${SSH_CMD[@]}" "$remote" 'bash -s' <<'REMOTE_SCRIPT'
+          set -eu
+
+          APP_DIR=/opt/housing-owner-tenant-platform
+          SUDO=""
+          if [ "$(id -u)" -ne 0 ]; then
+            SUDO=sudo
+          fi
+
+          $SUDO mkdir -p "$APP_DIR"
+          $SUDO tar -xzf /tmp/housing-owner-tenant-platform.tgz -C "$APP_DIR"
+          $SUDO mv /tmp/housing-owner-tenant-platform.env "$APP_DIR/.env"
+          cd "$APP_DIR"
+
+          if ! command -v docker >/dev/null 2>&1; then
+            if ! command -v apt-get >/dev/null 2>&1; then
+              echo "Docker is not installed, and this deploy script currently supports apt-based Linux only."
+              exit 1
+            fi
+
+            $SUDO apt-get update
+            $SUDO apt-get install -y ca-certificates curl gnupg
+            $SUDO install -m 0755 -d /etc/apt/keyrings
+            $SUDO curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+            $SUDO chmod a+r /etc/apt/keyrings/docker.asc
+            . /etc/os-release
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${VERSION_CODENAME} stable" | $SUDO tee /etc/apt/sources.list.d/docker.list >/dev/null
+            $SUDO apt-get update
+            $SUDO apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+          fi
+
+          $SUDO systemctl enable --now docker || true
+
+          if command -v ufw >/dev/null 2>&1; then
+            $SUDO ufw allow OpenSSH || true
+            $SUDO ufw allow 80/tcp || true
+            $SUDO ufw allow 443/tcp || true
+          fi
+
+          $SUDO docker compose -f docker-compose.prod.yml up -d --build
+          $SUDO docker compose -f docker-compose.prod.yml ps
+          REMOTE_SCRIPT
