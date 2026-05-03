@@ -6,10 +6,10 @@ This project is easiest to deploy with separate frontend and backend domains.
 
 ```text
 Frontend:
-  https://web.rentandbeyond.example.com
+  https://frontend.YOUR_VPS_IP.nip.io
 
 Backend:
-  https://api.rentandbeyond.example.com
+  https://backend.YOUR_VPS_IP.nip.io
 
 Postgres:
   internal/private host from your database provider
@@ -31,8 +31,8 @@ Redis:
 Example:
 
 ```bash
-NEXT_PUBLIC_API_BASE_URL=https://api.rentandbeyond.example.com
-API_BASE_URL_INTERNAL=https://api.rentandbeyond.example.com
+NEXT_PUBLIC_API_BASE_URL=https://backend.YOUR_VPS_IP.nip.io
+API_BASE_URL_INTERNAL=http://backend:8080
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-web-client-id.apps.googleusercontent.com
 HOSTNAME=0.0.0.0
 PORT=3000
@@ -46,7 +46,7 @@ Example:
 DB_URL=jdbc:postgresql://your-postgres-host:5432/housing_owner_tenant
 DB_USER=your_db_user
 DB_PASSWORD=your_db_password
-CORS_ALLOWED_ORIGINS=https://web.rentandbeyond.example.com
+CORS_ALLOWED_ORIGINS=https://frontend.YOUR_VPS_IP.nip.io
 PAYMENT_PROVIDER=STRIPE
 STRIPE_SECRET_KEY=sk_live_or_test_key
 STRIPE_PUBLISHABLE_KEY=pk_live_or_test_key
@@ -54,7 +54,7 @@ STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
 GOOGLE_OAUTH_CLIENT_ID=your-google-web-client-id.apps.googleusercontent.com
 GOOGLE_OAUTH_CLIENT_SECRET=your-google-web-client-secret
 GOOGLE_OAUTH_ALLOWED_CLIENT_IDS=your-google-web-client-id.apps.googleusercontent.com
-GOOGLE_OAUTH_ALLOWED_REDIRECT_URIS=https://web.rentandbeyond.example.com/account/login/gmail,https://web.rentandbeyond.example.com/account/register/gmail,https://web.rentandbeyond.example.com/rest/oauth2-credential/callback
+GOOGLE_OAUTH_ALLOWED_REDIRECT_URIS=https://frontend.YOUR_VPS_IP.nip.io/account/login/gmail,https://frontend.YOUR_VPS_IP.nip.io/account/register/gmail,https://frontend.YOUR_VPS_IP.nip.io/rest/oauth2-credential/callback
 ```
 
 ## Notes

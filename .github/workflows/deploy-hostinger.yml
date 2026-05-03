@@ -1,0 +1,29 @@
+name: Deploy to Hostinger VPS
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Hostinger VPS
+        uses: hostinger/deploy-on-vps@v2
+        with:
+          api-key: ${{ secrets.HOSTINGERAPIKEY }}
+          virtual-machine: 1637073
+          project-name: housing-owner-tenant-platform
+          docker-compose-path: docker-compose.prod.yml
+          environment-variables: |
+            NODE_ENV=production
+            FRONTEND_DOMAIN=frontend.${{ secrets.HOSTINGER_VPS_IP }}.nip.io
+            BACKEND_DOMAIN=backend.${{ secrets.HOSTINGER_VPS_IP }}.nip.io
+            GOOGLE_OAUTH_ALLOWED_REDIRECT_URIS=https://frontend.${{ secrets.HOSTINGER_VPS_IP }}.nip.io/account/login/gmail,https://frontend.${{ secrets.HOSTINGER_VPS_IP }}.nip.io/account/register/gmail,https://frontend.${{ secrets.HOSTINGER_VPS_IP }}.nip.io/rest/oauth2-credential/callback
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+            GOOGLE_OAUTH_CLIENT_SECRET=${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+            GOOGLE_OAUTH_ALLOWED_CLIENT_IDS=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
