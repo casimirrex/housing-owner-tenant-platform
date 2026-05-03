@@ -1,0 +1,62 @@
+name: Attach VPS SSH Key
+
+on:
+  workflow_dispatch:
+
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Attach deploy public key to Hostinger VPS
+        env:
+          HOSTINGER_API_KEY: ${{ secrets.HOSTINGERAPIKEY }}
+          DEPLOY_PUBLIC_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH1rm0B7FTwGd3ZxuV8bFTWjqtb4X/BLnwYaHGDYNmSf github-actions-housing-owner-tenant
+        run: |
+          set -euo pipefail
+
+          create_response="$(jq -n \
+            --arg name "github-actions-housing-owner-tenant-${GITHUB_RUN_ID}" \
+            --arg key "$DEPLOY_PUBLIC_KEY" \
+            '{name: $name, key: $key}' |
+            curl -sS -w '\n%{http_code}' -X POST \
+              -H "Authorization: Bearer ${HOSTINGER_API_KEY}" \
+              -H "Accept: application/json" \
+              -H "Content-Type: application/json" \
+              -d @- \
+              "https://developers.hostinger.com/api/vps/v1/public-keys")"
+
+          create_body="$(printf '%s\n' "$create_response" | sed '$d')"
+          create_status="$(printf '%s\n' "$create_response" | tail -n1)"
+
+          if [ "$create_status" -lt 200 ] || [ "$create_status" -ge 300 ]; then
+            echo "Creating Hostinger public key failed with status $create_status"
+            printf '%s\n' "$create_body"
+            exit 1
+          fi
+
+          key_id="$(printf '%s\n' "$create_body" | jq -r '.id')"
+          if [ -z "$key_id" ] || [ "$key_id" = "null" ]; then
+            echo "Could not read public key id from Hostinger response."
+            printf '%s\n' "$create_body"
+            exit 1
+          fi
+
+          attach_response="$(jq -n --argjson id "$key_id" '{ids: [$id]}' |
+            curl -sS -w '\n%{http_code}' -X POST \
+              -H "Authorization: Bearer ${HOSTINGER_API_KEY}" \
+              -H "Accept: application/json" \
+              -H "Content-Type: application/json" \
+              -d @- \
+              "https://developers.hostinger.com/api/vps/v1/public-keys/attach/1637073")"
+
+          attach_body="$(printf '%s\n' "$attach_response" | sed '$d')"
+          attach_status="$(printf '%s\n' "$attach_response" | tail -n1)"
+
+          if [ "$attach_status" -ge 200 ] && [ "$attach_status" -lt 300 ]; then
+            echo "Deploy SSH public key attached to VPS 1637073."
+          else
+            echo "Attaching Hostinger public key failed with status $attach_status"
+            printf '%s\n' "$attach_body"
+            exit 1
+          fi
