@@ -48,17 +48,17 @@ jobs:
           chmod 700 "$HOME/.ssh"
           ssh-keyscan -p "$VPS_SSH_PORT" -H "$VPS_SSH_HOST" >> "$HOME/.ssh/known_hosts"
 
-          if [ -n "${VPS_SSH_PRIVATE_KEY:-}" ]; then
-            printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > "$HOME/.ssh/vps_deploy_key"
-            chmod 600 "$HOME/.ssh/vps_deploy_key"
-            SSH_CMD=(ssh -i "$HOME/.ssh/vps_deploy_key" -p "$VPS_SSH_PORT")
-            SCP_CMD=(scp -i "$HOME/.ssh/vps_deploy_key" -P "$VPS_SSH_PORT")
-          elif [ -n "${VPS_SSH_PASSWORD:-}" ]; then
+          if [ -n "${VPS_SSH_PASSWORD:-}" ]; then
             sudo apt-get update
             sudo apt-get install -y sshpass
             export SSHPASS="$VPS_SSH_PASSWORD"
             SSH_CMD=(sshpass -e ssh -p "$VPS_SSH_PORT")
             SCP_CMD=(sshpass -e scp -P "$VPS_SSH_PORT")
+          elif [ -n "${VPS_SSH_PRIVATE_KEY:-}" ]; then
+            printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > "$HOME/.ssh/vps_deploy_key"
+            chmod 600 "$HOME/.ssh/vps_deploy_key"
+            SSH_CMD=(ssh -i "$HOME/.ssh/vps_deploy_key" -p "$VPS_SSH_PORT")
+            SCP_CMD=(scp -i "$HOME/.ssh/vps_deploy_key" -P "$VPS_SSH_PORT")
           else
             echo "Missing VPS_SSH_PRIVATE_KEY or VPS_SSH_PASSWORD secret."
             exit 1
