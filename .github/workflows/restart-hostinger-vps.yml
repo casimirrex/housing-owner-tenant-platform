@@ -11,7 +11,7 @@ jobs:
       - name: Restart VPS
         run: |
           response="$(curl -sS -w '\n%{http_code}' -X POST \
-            -H "Authorization: ${{ secrets.HOSTINGERAPIKEY }}" \
+            -H "Authorization: Bearer ${{ secrets.HOSTINGERAPIKEY }}" \
             -H "Accept: application/json" \
             "https://developers.hostinger.com/api/vps/v1/virtual-machines/1637073/restart")"
 
