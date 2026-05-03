@@ -14,12 +14,11 @@ jobs:
         run: |
           tar \
             --exclude='.git' \
-            --exclude='housing-owner-tenant-platform.tgz' \
             --exclude='frontend/node_modules' \
             --exclude='frontend/.next' \
             --exclude='backend/target' \
             --exclude='mobile/node_modules' \
-            -czf housing-owner-tenant-platform.tgz .
+            -czf /tmp/housing-owner-tenant-platform.tgz .
 
       - name: Deploy over SSH
         env:
@@ -77,7 +76,7 @@ jobs:
           GOOGLE_OAUTH_ALLOWED_CLIENT_IDS=${GOOGLE_OAUTH_CLIENT_ID}
           EOF
 
-          "${SCP_CMD[@]}" housing-owner-tenant-platform.tgz "$remote:/tmp/housing-owner-tenant-platform.tgz"
+          "${SCP_CMD[@]}" /tmp/housing-owner-tenant-platform.tgz "$remote:/tmp/housing-owner-tenant-platform.tgz"
           "${SCP_CMD[@]}" deploy.env "$remote:/tmp/housing-owner-tenant-platform.env"
 
           "${SSH_CMD[@]}" "$remote" 'bash -s' <<'REMOTE_SCRIPT'
