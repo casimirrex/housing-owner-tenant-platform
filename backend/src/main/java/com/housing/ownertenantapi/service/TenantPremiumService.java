@@ -21,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class TenantPremiumService {
 
   public static final String PLAN_CODE_TENANT_PREMIUM_ANNUAL = "TENANT_PREMIUM_ANNUAL";
+  public static final String PLAN_CODE_OWNER_PREMIUM_ANNUAL = "OWNER_PREMIUM_ANNUAL";
 
   private static final String ROLE_TENANT = "TENANT";
   private static final String ROLE_OWNER = "OWNER";
@@ -270,7 +271,30 @@ public class TenantPremiumService {
     return findActiveSubscription(userId, now).isPresent();
   }
 
+  /** Owner-side premium check used by OwnerListingService to gate listing creation. */
+  public boolean hasActiveOwnerPremium(String userId) {
+    return findActiveSubscriptionForPlan(userId, PLAN_CODE_OWNER_PREMIUM_ANNUAL, nowUtc()).isPresent();
+  }
+
+  /**
+   * Throws HTTP 402 Payment Required if the owner has no active OWNER_PREMIUM
+   * subscription. Called from OwnerListingService before INSERT.
+   */
+  public void requireOwnerPremium(String ownerUserId) {
+    if (!hasActiveOwnerPremium(ownerUserId)) {
+      throw new ResponseStatusException(
+          HttpStatus.PAYMENT_REQUIRED,
+          "Owner Premium subscription required to publish listings. Activate Owner Premium for Rs. 1,000/year from your wallet."
+      );
+    }
+  }
+
   private Optional<SubscriptionRecord> findActiveSubscription(String userId, OffsetDateTime now) {
+    return findActiveSubscriptionForPlan(userId, PLAN_CODE_TENANT_PREMIUM_ANNUAL, now);
+  }
+
+  private Optional<SubscriptionRecord> findActiveSubscriptionForPlan(
+      String userId, String planCode, OffsetDateTime now) {
     return jdbcClient.sql("""
         SELECT subscription_id, plan_code, status, started_at, expires_at
         FROM user_subscriptions
@@ -282,7 +306,7 @@ public class TenantPremiumService {
         LIMIT 1
         """)
         .param("userId", userId)
-        .param("planCode", PLAN_CODE_TENANT_PREMIUM_ANNUAL)
+        .param("planCode", planCode)
         .param("status", STATUS_ACTIVE)
         .param("now", now)
         .query((rs, rowNum) -> new SubscriptionRecord(
@@ -296,6 +320,10 @@ public class TenantPremiumService {
   }
 
   private PlanRecord requireActivePlan() {
+    return requireActivePlanFor(PLAN_CODE_TENANT_PREMIUM_ANNUAL, ROLE_TENANT, "tenant");
+  }
+
+  private PlanRecord requireActivePlanFor(String planCode, String role, String label) {
     return jdbcClient.sql("""
         SELECT plan_code, plan_name, description, billing_period, price_amount, currency, validity_days
         FROM subscription_plans
@@ -303,8 +331,8 @@ public class TenantPremiumService {
           AND role = :role
           AND active = TRUE
         """)
-        .param("planCode", PLAN_CODE_TENANT_PREMIUM_ANNUAL)
-        .param("role", ROLE_TENANT)
+        .param("planCode", planCode)
+        .param("role", role)
         .query((rs, rowNum) -> new PlanRecord(
             rs.getString("plan_code"),
             rs.getString("plan_name"),
@@ -317,8 +345,164 @@ public class TenantPremiumService {
         .optional()
         .orElseThrow(() -> new ResponseStatusException(
             HttpStatus.INTERNAL_SERVER_ERROR,
-            "The tenant premium plan is not configured yet."
+            "The " + label + " premium plan is not configured yet."
         ));
+  }
+
+  /** Owner-side: returns plan price + wallet balance + activation eligibility. */
+  public TenantPremiumAccessResponse getOwnerCurrentAccess(String authorizationHeader) {
+    CurrentSessionService.SessionIdentity identity = currentSessionService.requireRole(
+        authorizationHeader,
+        ROLE_OWNER,
+        "Sign in as an owner to manage owner premium access.",
+        "Owner premium access is only available for owner accounts."
+    );
+
+    PlanRecord plan = requireActivePlanFor(PLAN_CODE_OWNER_PREMIUM_ANNUAL, ROLE_OWNER, "owner");
+    OffsetDateTime now = nowUtc();
+    Optional<SubscriptionRecord> activeSubscription =
+        findActiveSubscriptionForPlan(identity.userId(), PLAN_CODE_OWNER_PREMIUM_ANNUAL, now);
+    long walletBalance = getOrCreateWalletBalance(identity.userId());
+    boolean premiumActive = activeSubscription.isPresent();
+    long shortfallAmount = Math.max(0L, plan.priceAmount() - walletBalance);
+    boolean canActivate = !premiumActive && shortfallAmount == 0L;
+
+    String message = premiumActive
+        ? "Owner Premium is active. You can publish listings."
+        : canActivate
+            ? "Your wallet balance is ready. You can activate Owner Premium immediately."
+            : "Top up your wallet to activate Owner Premium and start publishing listings.";
+
+    return new TenantPremiumAccessResponse(
+        plan.planCode(),
+        plan.planName(),
+        plan.description(),
+        plan.priceAmount(),
+        plan.currency(),
+        plan.billingPeriod(),
+        plan.validityDays(),
+        premiumActive,
+        activeSubscription.map(SubscriptionRecord::status).orElse("INACTIVE"),
+        activeSubscription.map(subscription -> formatTimestamp(subscription.startedAt())).orElse(null),
+        activeSubscription.map(subscription -> formatTimestamp(subscription.expiresAt())).orElse(null),
+        walletBalance,
+        formatInr(walletBalance, plan.currency()),
+        canActivate,
+        shortfallAmount,
+        message
+    );
+  }
+
+  /** Owner-side: deduct plan price from wallet and create subscription. */
+  @Transactional
+  public TenantPremiumActivationResponse activateOwnerPremium(String authorizationHeader) {
+    CurrentSessionService.SessionIdentity identity = currentSessionService.requireRole(
+        authorizationHeader,
+        ROLE_OWNER,
+        "Sign in as an owner to activate owner premium access.",
+        "Owner premium access is only available for owner accounts."
+    );
+
+    PlanRecord plan = requireActivePlanFor(PLAN_CODE_OWNER_PREMIUM_ANNUAL, ROLE_OWNER, "owner");
+    OffsetDateTime now = nowUtc();
+    Optional<SubscriptionRecord> activeSubscription =
+        findActiveSubscriptionForPlan(identity.userId(), PLAN_CODE_OWNER_PREMIUM_ANNUAL, now);
+    if (activeSubscription.isPresent()) {
+      long walletBalance = getOrCreateWalletBalance(identity.userId());
+      SubscriptionRecord subscription = activeSubscription.get();
+      return new TenantPremiumActivationResponse(
+          true,
+          subscription.subscriptionId(),
+          subscription.planCode(),
+          subscription.status(),
+          formatTimestamp(subscription.startedAt()),
+          formatTimestamp(subscription.expiresAt()),
+          walletBalance,
+          "Owner Premium is already active for this account."
+      );
+    }
+
+    String walletId = getOrCreateWalletId(identity.userId());
+    long walletBalance = getWalletBalance(walletId);
+    if (walletBalance < plan.priceAmount()) {
+      long shortfall = plan.priceAmount() - walletBalance;
+      throw new ResponseStatusException(
+          HttpStatus.PAYMENT_REQUIRED,
+          "Add " + formatInr(shortfall, plan.currency()) + " more to your wallet before activating Owner Premium."
+      );
+    }
+
+    String walletTxnId = "wtxn_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+    String subscriptionId = "sub_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+    OffsetDateTime expiresAt = now.plusDays(plan.validityDays());
+
+    jdbcClient.sql("""
+        INSERT INTO wallet_transactions
+          (txn_id, wallet_id, user_id, txn_type, amount, currency, status, provider,
+           provider_order_id, provider_payment_id, client_secret, description, created_at, completed_at)
+        VALUES
+          (:txnId, :walletId, :userId, :txnType, :amount, :currency, :status, :provider,
+           :orderId, :paymentId, NULL, :description, :createdAt, :completedAt)
+        """)
+        .param("txnId", walletTxnId)
+        .param("walletId", walletId)
+        .param("userId", identity.userId())
+        .param("txnType", WALLET_TXN_PREMIUM_SUBSCRIPTION)
+        .param("amount", plan.priceAmount())
+        .param("currency", plan.currency())
+        .param("status", STATUS_COMPLETED)
+        .param("provider", WALLET_PROVIDER_INTERNAL)
+        .param("orderId", subscriptionId)
+        .param("paymentId", subscriptionId)
+        .param("description", "Owner Premium annual activation")
+        .param("createdAt", now)
+        .param("completedAt", now)
+        .update();
+
+    jdbcClient.sql("""
+        UPDATE wallet_accounts
+        SET balance = balance - :amount,
+            updated_at = :updatedAt
+        WHERE wallet_id = :walletId
+        """)
+        .param("amount", plan.priceAmount())
+        .param("updatedAt", now)
+        .param("walletId", walletId)
+        .update();
+
+    jdbcClient.sql("""
+        INSERT INTO user_subscriptions
+          (subscription_id, user_id, plan_code, status, started_at, expires_at,
+           activated_via, amount_paid, currency, payment_reference, created_at, updated_at)
+        VALUES
+          (:subscriptionId, :userId, :planCode, :status, :startedAt, :expiresAt,
+           :activatedVia, :amountPaid, :currency, :paymentReference, :createdAt, :updatedAt)
+        """)
+        .param("subscriptionId", subscriptionId)
+        .param("userId", identity.userId())
+        .param("planCode", plan.planCode())
+        .param("status", STATUS_ACTIVE)
+        .param("startedAt", now)
+        .param("expiresAt", expiresAt)
+        .param("activatedVia", ACTIVATED_VIA_WALLET)
+        .param("amountPaid", plan.priceAmount())
+        .param("currency", plan.currency())
+        .param("paymentReference", walletTxnId)
+        .param("createdAt", now)
+        .param("updatedAt", now)
+        .update();
+
+    long updatedBalance = getWalletBalance(walletId);
+    return new TenantPremiumActivationResponse(
+        true,
+        subscriptionId,
+        plan.planCode(),
+        STATUS_ACTIVE,
+        formatTimestamp(now),
+        formatTimestamp(expiresAt),
+        updatedBalance,
+        "Owner Premium is now active. You can publish listings for the next " + plan.validityDays() + " days."
+    );
   }
 
   private long getOrCreateWalletBalance(String userId) {

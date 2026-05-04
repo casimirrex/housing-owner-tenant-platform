@@ -230,7 +230,8 @@ INSERT INTO users (
 INSERT INTO subscription_plans (
   plan_code, role, plan_name, description, billing_period, price_amount, currency, validity_days, active
 ) VALUES
-  ('TENANT_PREMIUM_ANNUAL', 'TENANT', 'Tenant Premium', 'Unlock full property details, exact address, owner profile, and advanced trust insights.', 'ANNUAL', 500, 'INR', 365, TRUE);
+  ('TENANT_PREMIUM_ANNUAL', 'TENANT', 'Tenant Premium', 'Unlock full property details, exact address, owner profile, and advanced trust insights.', 'ANNUAL', 1000, 'INR', 365, TRUE),
+  ('OWNER_PREMIUM_ANNUAL', 'OWNER', 'Owner Premium', 'Required to publish property listings. One annual fee gives you unlimited listings, owner dashboard, and tenant matching.', 'ANNUAL', 1000, 'INR', 365, TRUE);
 
 INSERT INTO user_subscriptions (
   subscription_id, user_id, plan_code, status, started_at, expires_at,
@@ -238,7 +239,7 @@ INSERT INTO user_subscriptions (
 ) VALUES
   ('sub_tenant_premium_1001', 'user_1a2b3c4d', 'TENANT_PREMIUM_ANNUAL', 'ACTIVE',
    TIMESTAMPTZ '2026-04-01T08:00:00Z', TIMESTAMPTZ '2027-04-01T08:00:00Z',
-   'SEEDED', 500, 'INR', 'seed_premium_activation_1001',
+   'SEEDED', 1000, 'INR', 'seed_premium_activation_1001',
    TIMESTAMPTZ '2026-04-01T08:00:00Z', TIMESTAMPTZ '2026-04-01T08:00:00Z');
 
 INSERT INTO user_preferences (

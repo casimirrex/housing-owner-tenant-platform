@@ -1,10 +1,6 @@
-import { Suspense } from "react";
-import { GmailAuthJourney } from "@/components/sections/gmail-auth-journey";
+import { redirect } from "next/navigation";
 
+// Gmail SSO has been removed. Redirect to standard email registration.
 export default function AccountGmailRegisterPage() {
-  return (
-    <Suspense fallback={null}>
-      <GmailAuthJourney mode="register" />
-    </Suspense>
-  );
+  redirect("/account/register");
 }

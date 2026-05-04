@@ -25,13 +25,16 @@ public class OwnerListingService {
 
   private final JdbcTemplate jdbcTemplate;
   private final CurrentSessionService currentSessionService;
+  private final TenantPremiumService premiumService;
 
   public OwnerListingService(
       JdbcTemplate jdbcTemplate,
-      CurrentSessionService currentSessionService
+      CurrentSessionService currentSessionService,
+      TenantPremiumService premiumService
   ) {
     this.jdbcTemplate = jdbcTemplate;
     this.currentSessionService = currentSessionService;
+    this.premiumService = premiumService;
   }
 
   public OwnerListingCreateResponse createListing(
@@ -46,6 +49,10 @@ public class OwnerListingService {
       String ownerUserId,
       OwnerListingCreateRequest request
   ) {
+    // Owner Premium gating — only premium owners can publish a listing.
+    // Returns HTTP 402 Payment Required with a friendly message if missing.
+    premiumService.requireOwnerPremium(ownerUserId);
+
     long sequenceValue = jdbcTemplate.queryForObject("SELECT nextval('owner_listing_seq')", Long.class);
     String listingId = "owner_listing_" + sequenceValue;
     OffsetDateTime createdAt = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.SECONDS);
