@@ -111,7 +111,7 @@ const webContentPages: Record<string, WebContentPageResponse> = {
     eyebrow: "Brand story",
     title: "A calmer rental experience for both tenants and owners",
     description:
-      "RentMate is designed to make rental search feel lighter, clearer, and more trustworthy from the first browse to the final decision.",
+      "Testition is designed to make rental search feel lighter, clearer, and more trustworthy from the first browse to the final decision.",
     pageType: "INFORMATIONAL",
     ctaLabel: "Explore Bengaluru",
     ctaHref: "/cities/bengaluru",
@@ -278,7 +278,7 @@ const webContentPages: Record<string, WebContentPageResponse> = {
   "terms-conditions": {
     slug: "terms-conditions",
     eyebrow: "Legal",
-    title: "Terms and conditions for using RentMate",
+    title: "Terms and conditions for using Testition",
     description:
       "The terms define the responsibilities around listings, platform use, communication, and future workflow expansion.",
     pageType: "LEGAL",

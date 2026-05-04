@@ -14,10 +14,17 @@ import { useAuthStore } from "@/store/auth-store";
 type AccountPath = "TENANT" | "OWNER";
 type RegistrationChoice = "gmail-address" | "google" | "phone";
 
-const emailRegistrationSchema = z.object({
-  fullName: z.string().min(2, "Enter your full name"),
-  email: z.string().email("Enter a valid email address")
-});
+const emailRegistrationSchema = z
+  .object({
+    fullName: z.string().min(2, "Enter your full name"),
+    email: z.string().email("Enter a valid email address"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string().min(8, "Confirm your password")
+  })
+  .refine((values) => values.password === values.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match"
+  });
 
 const phoneRegistrationSchema = z.object({
   fullName: z.string().min(2, "Enter your full name"),
@@ -83,7 +90,7 @@ export function RegistrationExperience({
   logoutHref = "/logout",
   onboardingHref = "/onboarding",
   ownerLoginHref = "/owner/login",
-  ownerSetupHref = "/list-your-home",
+  ownerSetupHref = "/owner/register",
   tenantLoginHref = "/tenant/login"
 }: {
   googleHref?: string;
@@ -106,7 +113,9 @@ export function RegistrationExperience({
     resolver: zodResolver(emailRegistrationSchema),
     defaultValues: {
       fullName: "",
-      email: ""
+      email: "",
+      password: "",
+      confirmPassword: ""
     }
   });
 
@@ -120,11 +129,19 @@ export function RegistrationExperience({
   });
 
   const emailRegistrationMutation = useMutation({
-    mutationFn: (values: EmailRegistrationValues) => registerWithEmail(values),
+    mutationFn: (values: EmailRegistrationValues) => {
+      return registerWithEmail({
+        fullName: values.fullName,
+        email: values.email,
+        password: values.password,
+        role: accountPath
+      });
+    },
     onSuccess: (response) => {
       setSession(response);
       setPageError(null);
-      setPageNotice("Account created! Taking you to account setup…");
+      setPageNotice("Tenant account created successfully. Taking you to account setup.");
+      setStatusMessage("Tenant account created successfully. Taking you to account setup.");
       router.push(onboardingHref);
     },
     onError: (error) => {
@@ -133,11 +150,13 @@ export function RegistrationExperience({
   });
 
   const phoneRegistrationMutation = useMutation({
-    mutationFn: (values: PhoneRegistrationValues) => registerWithPhone(values),
+    mutationFn: (values: PhoneRegistrationValues) =>
+      registerWithPhone({ ...values, role: accountPath }),
     onSuccess: (response) => {
       setSession(response);
       setPageError(null);
-      setPageNotice("Account created! Taking you to account setup…");
+      setPageNotice("Tenant account created successfully. Taking you to account setup.");
+      setStatusMessage("Tenant account created successfully. Taking you to account setup.");
       router.push(onboardingHref);
     },
     onError: (error) => {
@@ -146,22 +165,9 @@ export function RegistrationExperience({
   });
 
   const pending = emailRegistrationMutation.isPending || phoneRegistrationMutation.isPending;
-  const typedEmailAddress = emailRegistrationForm.watch("email");
-  const typedGmailAddress = isGmailAddress(typedEmailAddress ?? "");
   const isTenantPath = accountPath === "TENANT";
 
   const handleEmailRegistration = (values: EmailRegistrationValues) => {
-    if (isGmailAddress(values.email)) {
-      const gmailPath = googleHref ?? "/account/register/gmail";
-      const params = new URLSearchParams({ email: values.email });
-
-      setStatusMessage(
-        "Opening the Gmail registration page now. No email will be sent to your inbox for this step."
-      );
-      router.push(`${gmailPath}?${params.toString()}`);
-      return;
-    }
-
     emailRegistrationMutation.mutate(values);
   };
 
@@ -256,15 +262,15 @@ export function RegistrationExperience({
               <div className="mt-4 grid gap-3 text-sm leading-6 text-ink/74">
                 <p>
                   <span className="font-semibold text-ink">1.</span> Create a separate owner
-                  account with email, phone, and password.
+                  account with email and password.
                 </p>
                 <p>
-                  <span className="font-semibold text-ink">2.</span> Publish the first property
-                  from the same setup page.
+                  <span className="font-semibold text-ink">2.</span> Continue to the add-property
+                  page after registration.
                 </p>
                 <p>
-                  <span className="font-semibold text-ink">3.</span> Land in the owner dashboard
-                  where you can add more listings and assign payments to tenants.
+                  <span className="font-semibold text-ink">3.</span> Publish and manage listings
+                  from the owner workspace.
                 </p>
               </div>
             </div>
@@ -292,15 +298,15 @@ export function RegistrationExperience({
               ) : (
                 <>
                   <p>
-                    <span className="font-semibold text-ink">1.</span> Open the owner setup page.
+                    <span className="font-semibold text-ink">1.</span> Open the owner registration page.
                   </p>
                   <p>
-                    <span className="font-semibold text-ink">2.</span> Save the owner account and first
-                    property together.
+                    <span className="font-semibold text-ink">2.</span> Create the owner account with a
+                    confirmed password.
                   </p>
                   <p>
-                    <span className="font-semibold text-ink">3.</span> Continue into the owner dashboard
-                    to manage live listings.
+                    <span className="font-semibold text-ink">3.</span> Continue to the add-property page
+                    to publish the first listing.
                   </p>
                 </>
               )}
@@ -356,11 +362,10 @@ export function RegistrationExperience({
         {!isTenantPath ? (
           <div className="mt-4 grid gap-6">
             <div>
-              <h3 className="font-serif text-3xl text-ink">Create an owner account and publish the first property</h3>
+              <h3 className="font-serif text-3xl text-ink">Create an owner account first</h3>
               <p className="mt-3 text-sm leading-6 text-ink/72">
-                Owner registration lives on a dedicated page so property details, owner sign-in,
-                and renter accounts do not get tangled together. Start there when your goal is to
-                upload a home and manage listings.
+                Owner registration lives on a dedicated page. After the account is created, we take
+                you to a separate add-property page to upload the first home.
               </p>
             </div>
 
@@ -371,13 +376,13 @@ export function RegistrationExperience({
                 </p>
                 <div className="mt-3 grid gap-2 text-sm leading-6 text-ink/74">
                   <p>Separate owner sign-in and owner dashboard.</p>
-                  <p>Your first live property listing created in the same flow.</p>
+                  <p>A clean handoff to the add-property page after successful registration.</p>
                   <p>Access to owner collections and tenant payment assignment.</p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-3">
                 <Link className="button-primary" href={ownerSetupHref}>
-                  Start owner setup
+                  Start owner registration
                 </Link>
                 <Link className="button-secondary" href={ownerLoginHref}>
                   Already have owner sign-in?
@@ -422,14 +427,40 @@ export function RegistrationExperience({
               </label>
 
               <label className="text-sm font-medium text-ink/78">
-                Gmail or email address
+                Email address
                 <input
                   className="mt-2 w-full rounded-2xl border border-black/8 bg-white/80 px-4 py-3 outline-none"
-                  placeholder="you@gmail.com"
+                  placeholder="you@example.com"
                   {...emailRegistrationForm.register("email")}
                 />
                 <span className="mt-2 block text-xs text-copper">
                   {emailRegistrationForm.formState.errors.email?.message}
+                </span>
+              </label>
+
+              <label className="text-sm font-medium text-ink/78">
+                Password
+                <input
+                  className="mt-2 w-full rounded-2xl border border-black/8 bg-white/80 px-4 py-3 outline-none"
+                  type="password"
+                  placeholder="At least 8 characters"
+                  {...emailRegistrationForm.register("password")}
+                />
+                <span className="mt-2 block text-xs text-copper">
+                  {emailRegistrationForm.formState.errors.password?.message}
+                </span>
+              </label>
+
+              <label className="text-sm font-medium text-ink/78">
+                Confirm password
+                <input
+                  className="mt-2 w-full rounded-2xl border border-black/8 bg-white/80 px-4 py-3 outline-none"
+                  type="password"
+                  placeholder="Re-enter your password"
+                  {...emailRegistrationForm.register("confirmPassword")}
+                />
+                <span className="mt-2 block text-xs text-copper">
+                  {emailRegistrationForm.formState.errors.confirmPassword?.message}
                 </span>
               </label>
 
@@ -439,27 +470,15 @@ export function RegistrationExperience({
                 type="submit"
               >
                 {emailRegistrationMutation.isPending
-                  ? "Starting registration..."
-                  : typedGmailAddress
-                    ? "Continue with Gmail"
-                    : "Register with this email"}
+                  ? "Creating account..."
+                  : "Register with this email"}
               </button>
             </form>
-
-            {typedGmailAddress ? (
-              <div className="soft-panel">
-                <p className="text-sm leading-6 text-ink/74">
-                  Next step: after you click the button above, we will open the dedicated Gmail
-                  page and Google will ask you to confirm the Gmail account. No mail will be sent
-                  to your Gmail inbox for this step.
-                </p>
-              </div>
-            ) : null}
 
             {emailRegistrationMutation.isSuccess ? (
               <div className="soft-panel">
                 <p className="text-sm leading-6 text-ink/74">
-                  Account created! Redirecting you to account setup…
+                  Tenant account created successfully. Redirecting you to account setup…
                 </p>
               </div>
             ) : null}
@@ -562,7 +581,7 @@ export function RegistrationExperience({
             {phoneRegistrationMutation.isSuccess ? (
               <div className="soft-panel">
                 <p className="text-sm leading-6 text-ink/74">
-                  Account created! Redirecting you to account setup…
+                  Tenant account created successfully. Redirecting you to account setup…
                 </p>
               </div>
             ) : null}

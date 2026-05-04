@@ -49,10 +49,8 @@ public class OwnerListingService {
       String ownerUserId,
       OwnerListingCreateRequest request
   ) {
-    // Owner Premium gating — only premium owners can publish a listing.
-    // Returns HTTP 402 Payment Required with a friendly message if missing.
-    premiumService.requireOwnerPremium(ownerUserId);
-
+    boolean ownerPremiumActive = premiumService.hasActiveOwnerPremium(ownerUserId);
+    String listingStatus = ownerPremiumActive ? "PUBLISHED" : "DRAFT";
     long sequenceValue = jdbcTemplate.queryForObject("SELECT nextval('owner_listing_seq')", Long.class);
     String listingId = "owner_listing_" + sequenceValue;
     OffsetDateTime createdAt = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.SECONDS);
@@ -80,7 +78,7 @@ public class OwnerListingService {
                     'AVAILABLE', ?, ?, FALSE, FALSE, FALSE, NULL,
                     'Added today', NULL, NULL, NULL, FALSE, TRUE, ?, ?, ?, ?, ?,
                     'Pending verification', 90, 0.0, 0, 'Updated today', TRUE,
-                    TRUE, FALSE, TRUE, FALSE, 'PUBLISHED', ?)
+                    ?, FALSE, TRUE, FALSE, ?, ?)
             """,
         listingId,
         ownerUserId,
@@ -101,13 +99,15 @@ public class OwnerListingService {
         ownerIdentity.preferredLanguage(),
         ownerIdentity.badge(),
         ownerIdentity.yearsOnPlatform(),
+        ownerPremiumActive,
+        listingStatus,
         createdAt
     );
 
     replaceAmenities(listingId, request.amenities());
     replacePhotos(listingId, request.photos());
 
-    return new OwnerListingCreateResponse(listingId, "PUBLISHED", formatTimestamp(createdAt));
+    return new OwnerListingCreateResponse(listingId, listingStatus, formatTimestamp(createdAt));
   }
 
   public OwnerListingsResponse getListings(

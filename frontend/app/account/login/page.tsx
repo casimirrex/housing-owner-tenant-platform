@@ -17,7 +17,7 @@ export default async function AccountLoginPage() {
         signupHref: "/account/register",
         onboardingHref: "/account/onboarding",
         ownerLoginHref: "/owner/login",
-        ownerSetupHref: "/list-your-home",
+        ownerSetupHref: "/owner/register",
         tenantLoginHref: "/tenant/login"
       }}
     />

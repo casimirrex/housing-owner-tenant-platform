@@ -46,6 +46,10 @@ public class AuthService {
 
   public AuthSessionResponse registerWithPhone(PhoneRegistrationRequest request) {
     String phoneNumber = request.countryCode() + request.phoneNumber();
+    String syntheticEmail = syntheticEmailForPhone(phoneNumber);
+    String resolvedRole = resolveRegistrationRole(request.role());
+    String profileStatus = "OWNER".equals(resolvedRole) ? "ACTIVE" : "ONBOARDING";
+    int profileCompletion = "OWNER".equals(resolvedRole) ? 60 : 20;
 
     // Reject duplicates
     String existingUserId = findUserIdByPhone(phoneNumber);
@@ -66,13 +70,17 @@ public class AuthService {
               city, gender, occupation, photo_url, profile_completion, updated_at
             )
             VALUES (
-              :userId, :fullName, NULL, :phoneNumber, 'TENANT', 'ONBOARDING',
-              'Bengaluru', NULL, NULL, NULL, 20, :updatedAt
+              :userId, :fullName, :email, :phoneNumber, :role, :profileStatus,
+              'Bengaluru', NULL, NULL, NULL, :profileCompletion, :updatedAt
             )
             """)
         .param("userId", userId)
         .param("fullName", request.fullName())
+        .param("email", syntheticEmail)
         .param("phoneNumber", phoneNumber)
+        .param("role", resolvedRole)
+        .param("profileStatus", profileStatus)
+        .param("profileCompletion", profileCompletion)
         .param("updatedAt", now)
         .update();
 
@@ -84,6 +92,11 @@ public class AuthService {
         "Account created successfully. Welcome to the platform!",
         null
     );
+  }
+
+  private String syntheticEmailForPhone(String phoneNumber) {
+    String digitsOnly = phoneNumber.replaceAll("[^0-9]", "");
+    return "phone+" + digitsOnly + "@local.invalid";
   }
 
   public AuthSessionResponse registerWithEmail(EmailRegistrationRequest request) {
@@ -98,23 +111,28 @@ public class AuthService {
       );
     }
 
-    // Create the new user
+    // Create the new user — single-step registration with password (FR-26).
+    // Role can be specified in the request; defaults to TENANT.
     String userId = "email_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.SECONDS);
+    String resolvedRole = resolveRegistrationRole(request.role());
+    String hashedPassword = passwordEncoder.encode(request.password());
 
     jdbcClient.sql("""
             INSERT INTO users (
-              user_id, full_name, email, phone_number, role, profile_status,
+              user_id, full_name, email, phone_number, password_hash, role, profile_status,
               city, gender, occupation, photo_url, profile_completion, updated_at
             )
             VALUES (
-              :userId, :fullName, :email, NULL, 'TENANT', 'ONBOARDING',
-              'Bengaluru', NULL, NULL, NULL, 20, :updatedAt
+              :userId, :fullName, :email, NULL, :passwordHash, :role, 'ACTIVE',
+              'Bengaluru', NULL, NULL, NULL, 60, :updatedAt
             )
             """)
         .param("userId", userId)
         .param("fullName", request.fullName())
         .param("email", normalizedEmail)
+        .param("passwordHash", hashedPassword)
+        .param("role", resolvedRole)
         .param("updatedAt", now)
         .update();
 
@@ -211,7 +229,7 @@ public class AuthService {
             request.codeVerifier()
         )
         : googleIdentityService.verifyIdentityToken(request.identityToken());
-    String userId = upsertGoogleUser(googleIdentityProfile);
+    String userId = upsertGoogleUser(googleIdentityProfile, resolveRegistrationRole(request.role()));
     ensurePreferenceProfile(userId);
 
     return createAndStoreSession(
@@ -489,7 +507,7 @@ public class AuthService {
     }
   }
 
-  private String upsertGoogleUser(GoogleIdentityProfile googleIdentityProfile) {
+  private String upsertGoogleUser(GoogleIdentityProfile googleIdentityProfile, String resolvedRole) {
     String normalizedEmail = googleIdentityProfile.email().trim().toLowerCase(Locale.ROOT);
     String resolvedFullName = googleIdentityProfile.fullName() != null
         ? googleIdentityProfile.fullName()
@@ -521,25 +539,44 @@ public class AuthService {
     }
 
     String userId = buildGoogleUserId(googleIdentityProfile.subject());
+    String profileStatus = "OWNER".equals(resolvedRole) ? "ACTIVE" : "ONBOARDING";
+    int profileCompletion = "OWNER".equals(resolvedRole) ? 60 : 35;
     jdbcClient.sql("""
             INSERT INTO users (
               user_id, full_name, email, phone_number, role, profile_status,
               city, gender, occupation, photo_url, profile_completion, updated_at
             )
             VALUES (
-              :userId, :fullName, :email, NULL, 'TENANT', 'ONBOARDING',
-              'Bengaluru', NULL, NULL, :photoUrl, 35, :updatedAt
+              :userId, :fullName, :email, NULL, :role, :profileStatus,
+              'Bengaluru', NULL, NULL, :photoUrl, :profileCompletion, :updatedAt
             )
             """)
         .param("userId", userId)
         .param("fullName", resolvedFullName)
         .param("email", normalizedEmail)
+        .param("role", resolvedRole)
+        .param("profileStatus", profileStatus)
         .param("photoUrl", googleIdentityProfile.pictureUrl())
+        .param("profileCompletion", profileCompletion)
         .param("updatedAt", updatedAt)
         .update();
 
     upsertGoogleIdentity(userId, googleIdentityProfile, normalizedEmail, updatedAt);
     return userId;
+  }
+
+  private String resolveRegistrationRole(String role) {
+    if (!StringUtils.hasText(role)) {
+      return "TENANT";
+    }
+    String normalized = role.trim().toUpperCase(Locale.ROOT);
+    if ("OWNER".equals(normalized) || "TENANT".equals(normalized)) {
+      return normalized;
+    }
+    throw new ResponseStatusException(
+        HttpStatus.BAD_REQUEST,
+        "Unsupported role. Use OWNER or TENANT."
+    );
   }
 
   private void upsertGoogleIdentity(

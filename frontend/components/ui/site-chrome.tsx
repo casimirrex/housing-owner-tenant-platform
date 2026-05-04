@@ -107,7 +107,7 @@ function HeaderAccountActions() {
       <>
         {/* Desktop */}
         <div className="hidden items-center gap-2.5 md:flex">
-          <Link className="button-ghost px-4 py-2.5 text-sm" href="/list-your-home">
+          <Link className="button-ghost px-4 py-2.5 text-sm" href="/owner/register">
             List your property
           </Link>
           <Link className="button-ghost px-4 py-2.5 text-sm" href="/account/login">
@@ -119,7 +119,7 @@ function HeaderAccountActions() {
         </div>
         {/* Mobile */}
         <div className="mt-4 grid gap-2.5 md:hidden">
-          <Link className="button-ghost w-full justify-center" href="/list-your-home">
+          <Link className="button-ghost w-full justify-center" href="/owner/register">
             List your property
           </Link>
           <div className="grid grid-cols-2 gap-2.5">
@@ -212,11 +212,11 @@ export function SiteChrome({ children }: { children: ReactNode }) {
           <div className="flex flex-wrap items-center justify-between gap-5">
             <Link className="group flex items-center gap-3.5" href="/">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-navy text-xs font-bold uppercase tracking-[0.28em] text-oat">
-                RM
+                TN
               </div>
               <div>
                 <p className="font-serif text-[1.65rem] font-semibold leading-none tracking-[-0.01em] text-navy">
-                  RentMate
+                  Testition
                 </p>
                 <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.36em] text-ink/46">
                   Trust-first rentals
@@ -264,7 +264,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy text-[10px] font-bold uppercase tracking-widest text-oat">
                     RB
                   </div>
-                  <p className="font-serif text-xl font-semibold text-navy">RentMate</p>
+                  <p className="font-serif text-xl font-semibold text-navy">Testition</p>
                 </div>
                 <p className="mt-5 max-w-md font-serif text-2xl leading-snug text-ink md:text-[1.75rem]">
                   Trusted rentals for owners and tenants in one product.
@@ -277,7 +277,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
                   <Link className="button-primary" href="/search">
                     Search homes
                   </Link>
-                  <Link className="button-secondary" href="/list-your-home">
+                  <Link className="button-secondary" href="/owner/register">
                     List your home
                   </Link>
                 </div>
@@ -320,7 +320,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
 
             <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-black/6 pt-5">
               <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-ink/42">
-                © {new Date().getFullYear()} RentMate · All rights reserved
+                © {new Date().getFullYear()} Testition · All rights reserved
               </p>
               <p className="text-[11px] text-ink/46">
                 Bengaluru · Pune · Hyderabad · Chennai · NCR-Delhi

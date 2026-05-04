@@ -10,6 +10,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -33,13 +34,16 @@ public class TenantPremiumService {
 
   private final JdbcClient jdbcClient;
   private final CurrentSessionService currentSessionService;
+  private final boolean premiumWalletActivationEnabled;
 
   public TenantPremiumService(
       JdbcTemplate jdbcTemplate,
-      CurrentSessionService currentSessionService
+      CurrentSessionService currentSessionService,
+      @Value("${app.premium.wallet-activation.enabled:false}") boolean premiumWalletActivationEnabled
   ) {
     this.jdbcClient = JdbcClient.create(jdbcTemplate);
     this.currentSessionService = currentSessionService;
+    this.premiumWalletActivationEnabled = premiumWalletActivationEnabled;
   }
 
   public PropertyViewerAccessResponse resolvePropertyViewerAccess(
@@ -129,13 +133,18 @@ public class TenantPremiumService {
     long walletBalance = getOrCreateWalletBalance(identity.userId());
     boolean premiumActive = activeSubscription.isPresent();
     long shortfallAmount = Math.max(0L, plan.priceAmount() - walletBalance);
-    boolean canActivate = !premiumActive && shortfallAmount == 0L;
+    boolean canActivate = premiumWalletActivationEnabled && !premiumActive && shortfallAmount == 0L;
 
-    String message = premiumActive
-        ? "Premium access is already active for your tenant account."
-        : canActivate
-            ? "Your wallet balance is ready. You can activate premium immediately."
-            : "Top up your wallet to activate premium and unlock the full property detail experience.";
+    String message;
+    if (premiumActive) {
+      message = "Premium access is already active for your tenant account.";
+    } else if (!premiumWalletActivationEnabled) {
+      message = "Wallet-based premium activation is available only in local development.";
+    } else if (canActivate) {
+      message = "Your wallet balance is ready. You can activate premium immediately.";
+    } else {
+      message = "Top up your wallet to activate premium and unlock the full property detail experience.";
+    }
 
     return new TenantPremiumAccessResponse(
         plan.planCode(),
@@ -183,6 +192,8 @@ public class TenantPremiumService {
           "Premium access is already active for this tenant account."
       );
     }
+
+    requireLocalWalletActivationEnabled();
 
     String walletId = getOrCreateWalletId(identity.userId());
     long walletBalance = getWalletBalance(walletId);
@@ -365,13 +376,18 @@ public class TenantPremiumService {
     long walletBalance = getOrCreateWalletBalance(identity.userId());
     boolean premiumActive = activeSubscription.isPresent();
     long shortfallAmount = Math.max(0L, plan.priceAmount() - walletBalance);
-    boolean canActivate = !premiumActive && shortfallAmount == 0L;
+    boolean canActivate = premiumWalletActivationEnabled && !premiumActive && shortfallAmount == 0L;
 
-    String message = premiumActive
-        ? "Owner Premium is active. You can publish listings."
-        : canActivate
-            ? "Your wallet balance is ready. You can activate Owner Premium immediately."
-            : "Top up your wallet to activate Owner Premium and start publishing listings.";
+    String message;
+    if (premiumActive) {
+      message = "Owner Premium is active. You can publish listings.";
+    } else if (!premiumWalletActivationEnabled) {
+      message = "Wallet-based Owner Premium activation is available only in local development.";
+    } else if (canActivate) {
+      message = "Your wallet balance is ready. You can activate Owner Premium immediately.";
+    } else {
+      message = "Top up your wallet to activate Owner Premium and start publishing listings.";
+    }
 
     return new TenantPremiumAccessResponse(
         plan.planCode(),
@@ -421,6 +437,8 @@ public class TenantPremiumService {
           "Owner Premium is already active for this account."
       );
     }
+
+    requireLocalWalletActivationEnabled();
 
     String walletId = getOrCreateWalletId(identity.userId());
     long walletBalance = getWalletBalance(walletId);
@@ -522,18 +540,21 @@ public class TenantPremiumService {
         .orElseGet(() -> {
           String walletId = "wallet_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
           OffsetDateTime now = nowUtc();
-          jdbcClient.sql("""
+          return jdbcClient.sql("""
               INSERT INTO wallet_accounts
                 (wallet_id, user_id, balance, currency, created_at, updated_at)
               VALUES
                 (:walletId, :userId, 0, 'INR', :createdAt, :updatedAt)
+              ON CONFLICT (user_id)
+              DO UPDATE SET currency = wallet_accounts.currency
+              RETURNING wallet_id
               """)
               .param("walletId", walletId)
               .param("userId", userId)
               .param("createdAt", now)
               .param("updatedAt", now)
-              .update();
-          return walletId;
+              .query(String.class)
+              .single();
         });
   }
 
@@ -547,6 +568,15 @@ public class TenantPremiumService {
         .query(Long.class)
         .optional()
         .orElse(0L);
+  }
+
+  private void requireLocalWalletActivationEnabled() {
+    if (!premiumWalletActivationEnabled) {
+      throw new ResponseStatusException(
+          HttpStatus.FORBIDDEN,
+          "Wallet-based premium activation is available only in local development."
+      );
+    }
   }
 
   private static OffsetDateTime nowUtc() {

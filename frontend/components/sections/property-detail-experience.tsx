@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -51,8 +52,10 @@ export function PropertyDetailExperience({
   const detailQuery = useQuery({
     queryKey: ["property-detail", propertyId, accessToken ?? "guest"],
     queryFn: () => getPropertyDetail(propertyId, accessToken),
-    initialData: initialDetail
+    initialData: initialDetail,
+    staleTime: 0
   });
+  const { isFetching: isDetailFetching, refetch: refetchDetail } = detailQuery;
 
   const detail = detailQuery.data ?? initialDetail;
   const trustScoreCards = [
@@ -81,13 +84,41 @@ export function PropertyDetailExperience({
   });
 
   const premiumSummary = premiumQuery.data;
+  const hasUnlockedAccess =
+    fullAccess || detail.viewerAccess.premiumActive || premiumSummary?.premiumActive === true;
+  const isOwnerView = detail.viewerAccess.ownerView || sessionRole === "OWNER";
   const upgradePrice = detail.viewerAccess.upgradePrice ?? premiumSummary?.priceAmount ?? 500;
   const upgradeCurrency = detail.viewerAccess.upgradeCurrency ?? premiumSummary?.currency ?? "INR";
   const upgradePeriod = detail.viewerAccess.upgradePeriodLabel ?? "per year";
   const showUnlockButton =
-    sessionRole === "TENANT" && premiumSummary?.canActivate && !activatePremium.isPending;
+    sessionRole === "TENANT" &&
+    !hasUnlockedAccess &&
+    premiumSummary?.canActivate &&
+    !activatePremium.isPending;
   const requiresWalletTopup =
-    sessionRole === "TENANT" && !premiumSummary?.premiumActive && !premiumSummary?.canActivate;
+    sessionRole === "TENANT" &&
+    !hasUnlockedAccess &&
+    !premiumSummary?.premiumActive &&
+    !premiumSummary?.canActivate;
+
+  useEffect(() => {
+    if (
+      accessToken &&
+      sessionRole === "TENANT" &&
+      premiumSummary?.premiumActive &&
+      !fullAccess &&
+      !isDetailFetching
+    ) {
+      void refetchDetail();
+    }
+  }, [
+    accessToken,
+    fullAccess,
+    isDetailFetching,
+    premiumSummary?.premiumActive,
+    refetchDetail,
+    sessionRole
+  ]);
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-12 md:py-14">
@@ -200,11 +231,21 @@ export function PropertyDetailExperience({
           </div>
           <div className="mt-6 grid gap-3">
             <ShortlistButton propertyId={detail.property.propertyId} />
-            {detail.ctaFlags.canScheduleVisit ? (
+            {isOwnerView ? (
+              <Link className="button-secondary" href="/owner/dashboard">
+                <Building2 className="mr-2 h-4 w-4" />
+                Owner dashboard
+              </Link>
+            ) : fullAccess && detail.ctaFlags.canScheduleVisit ? (
               <Link className="button-primary" href="/account/onboarding">
                 <CalendarClock className="mr-2 h-4 w-4" />
                 Schedule visit
               </Link>
+            ) : hasUnlockedAccess ? (
+              <button className="button-secondary" disabled type="button">
+                <BadgeCheck className="mr-2 h-4 w-4" />
+                Premium access active
+              </button>
             ) : (
               <Link className="button-primary" href={sessionRole === "TENANT" ? "/wallet" : "/tenant/login"}>
                 <Crown className="mr-2 h-4 w-4" />
@@ -257,12 +298,18 @@ export function PropertyDetailExperience({
                 {premiumSummary ? (
                   <div className="mt-4 rounded-2xl border border-black/6 bg-white/70 px-4 py-4 text-sm text-ink/74">
                     <p className="font-semibold text-ink">{premiumSummary.message}</p>
-                    <p className="mt-2">Wallet balance: {premiumSummary.walletBalanceFormatted}</p>
-                    {premiumSummary.shortfallAmount > 0 ? (
-                      <p className="mt-1">
-                        Shortfall: {formatMoney(premiumSummary.shortfallAmount)}
-                      </p>
-                    ) : null}
+                    {premiumSummary.premiumActive ? (
+                      <p className="mt-2">Refreshing full property access for this page.</p>
+                    ) : (
+                      <>
+                        <p className="mt-2">Wallet balance: {premiumSummary.walletBalanceFormatted}</p>
+                        {premiumSummary.shortfallAmount > 0 ? (
+                          <p className="mt-1">
+                            Shortfall: {formatMoney(premiumSummary.shortfallAmount)}
+                          </p>
+                        ) : null}
+                      </>
+                    )}
                   </div>
                 ) : null}
                 <div className="mt-4 flex flex-wrap gap-3">

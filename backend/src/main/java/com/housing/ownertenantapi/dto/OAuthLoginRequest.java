@@ -13,6 +13,8 @@ public record OAuthLoginRequest(
     String identityToken,
     @Schema(description = "Frontend redirect URI used in the OAuth flow", example = "https://app.example.com/auth/callback")
     @NotBlank
-    String redirectUri
+    String redirectUri,
+    @Schema(description = "Requested account role for new OAuth users. Defaults to TENANT.", example = "OWNER")
+    String role
 ) {
 }

@@ -4,14 +4,16 @@ import Link from "next/link";
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, IndianRupee, Layers3, Sparkles, Wallet, CreditCard, CheckCircle, X } from "lucide-react";
+import { Building2, IndianRupee, Layers3, Sparkles, Wallet, CreditCard, CheckCircle, X, Crown } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import {
   createOwnerPaymentRecord,
   getCurrentUserProfile,
   getOwnerListings,
-  getPaymentsDashboard
+  getPaymentsDashboard,
+  getOwnerPremiumAccess,
+  activateOwnerPremium
 } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -73,6 +75,12 @@ export function OwnerDashboardExperience() {
     enabled: Boolean(accessToken)
   });
 
+  const ownerPremiumQuery = useQuery({
+    queryKey: ["owner-premium", accessToken ?? "guest"],
+    queryFn: () => getOwnerPremiumAccess(accessToken),
+    enabled: Boolean(accessToken)
+  });
+
   const createPaymentMutation = useMutation({
     mutationFn: (values: PaymentRecordValues) =>
       createOwnerPaymentRecord(
@@ -105,6 +113,22 @@ export function OwnerDashboardExperience() {
     }
   });
 
+  const activateOwnerPremiumMutation = useMutation({
+    mutationFn: () => activateOwnerPremium(accessToken),
+    onSuccess: (res) => {
+      setPaymentMsg({ type: "success", text: res.message });
+      queryClient.invalidateQueries({ queryKey: ["owner-premium", accessToken ?? "guest"] });
+      queryClient.invalidateQueries({ queryKey: ["wallet-dashboard", accessToken ?? "guest"] });
+      queryClient.invalidateQueries({ queryKey: ["owner-listings", accessToken ?? "guest"] });
+    },
+    onError: (error) => {
+      setPaymentMsg({
+        type: "error",
+        text: error instanceof Error ? error.message : "Could not activate Owner Premium."
+      });
+    }
+  });
+
   if (!session) {
     return (
       <main className="mx-auto max-w-6xl px-6 py-12">
@@ -119,7 +143,7 @@ export function OwnerDashboardExperience() {
             <Link className="button-accent" href="/owner/login">
               Owner sign in
             </Link>
-            <Link className="button-secondary border-white/20 bg-white/10 text-oat hover:bg-white hover:text-pine" href="/list-your-home">
+            <Link className="button-secondary border-white/20 bg-white/10 text-oat hover:bg-white hover:text-pine" href="/owner/register">
               Create owner account
             </Link>
             <Link className="button-secondary border-white/20 bg-white/10 text-oat hover:bg-white hover:text-pine" href="/">
@@ -174,6 +198,7 @@ export function OwnerDashboardExperience() {
   const draftCount = listings.filter((listing) => listing.status === "DRAFT").length;
   const liveRentPotential = listings.reduce((sum, listing) => sum + listing.rent, 0);
   const ownerOverview = paymentsQuery.data?.ownerOverview;
+  const ownerPremium = ownerPremiumQuery.data;
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-12">
@@ -191,7 +216,7 @@ export function OwnerDashboardExperience() {
               payments without leaving the app.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link className="button-primary" href="/owner/listings/new">
+              <Link className="button-primary" href={ownerPremium?.premiumActive ? "/owner/listings/new" : "/wallet"}>
                 Add new property
               </Link>
               <Link className="button-accent" href="/payments">
@@ -231,6 +256,86 @@ export function OwnerDashboardExperience() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="mt-8 section-panel">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <Crown className="mt-1 h-5 w-5 text-copper" />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-copper">
+                Owner Premium
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold text-ink">
+                Pay from wallet before publishing
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/70">
+                Owner Premium is required for publishing listings. Use your wallet balance to
+                activate the annual plan, then continue to the add-property page.
+              </p>
+            </div>
+          </div>
+          <Link className="button-secondary" href="/wallet">
+            Open wallet
+          </Link>
+        </div>
+
+        {ownerPremiumQuery.isLoading ? (
+          <p className="mt-5 text-sm text-ink/60">Checking owner premium status…</p>
+        ) : null}
+
+        {ownerPremiumQuery.isError ? (
+          <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {ownerPremiumQuery.error instanceof Error
+              ? ownerPremiumQuery.error.message
+              : "Could not load owner premium status."}
+          </div>
+        ) : null}
+
+        {ownerPremium ? (
+          <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_1fr_auto]">
+            <div className="soft-panel">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-copper">Plan</p>
+              <p className="mt-2 text-lg font-semibold text-ink">{ownerPremium.planName}</p>
+              <p className="mt-1 text-sm text-ink/64">
+                {formatCurrency(ownerPremium.priceAmount)} · {ownerPremium.billingPeriod.toLowerCase()}
+              </p>
+            </div>
+            <div className="soft-panel">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-copper">Wallet</p>
+              <p className="mt-2 text-lg font-semibold text-ink">
+                {ownerPremium.walletBalanceFormatted}
+              </p>
+              <p className="mt-1 text-sm text-ink/64">{ownerPremium.message}</p>
+              {ownerPremium.shortfallAmount > 0 ? (
+                <p className="mt-2 text-sm font-semibold text-copper">
+                  Shortfall: {formatCurrency(ownerPremium.shortfallAmount)}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-col justify-center gap-3 lg:min-w-56">
+              {ownerPremium.premiumActive ? (
+                <Link className="button-primary justify-center" href="/owner/listings/new">
+                  Add property
+                </Link>
+              ) : (
+                <button
+                  className="button-primary justify-center"
+                  disabled={!ownerPremium.canActivate || activateOwnerPremiumMutation.isPending}
+                  onClick={() => activateOwnerPremiumMutation.mutate()}
+                  type="button"
+                >
+                  {activateOwnerPremiumMutation.isPending ? "Activating…" : "Pay Owner Premium"}
+                </button>
+              )}
+              {!ownerPremium.premiumActive && ownerPremium.shortfallAmount > 0 ? (
+                <Link className="button-secondary justify-center" href="/wallet">
+                  Top up wallet
+                </Link>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-4">

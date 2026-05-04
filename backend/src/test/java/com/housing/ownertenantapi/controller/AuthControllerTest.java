@@ -32,20 +32,42 @@ class AuthControllerTest {
   private JdbcTemplate jdbcTemplate;
 
   @Test
-  void shouldStartPhoneRegistration() throws Exception {
+  void shouldRegisterTenantWithPhoneByDefault() throws Exception {
+    String phoneNumber = uniquePhoneNumber();
+
     mockMvc.perform(post("/auth/register/phone")
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
                   "fullName": "Aarav Kumar",
                   "countryCode": "+91",
-                  "phoneNumber": "9876543210"
+                  "phoneNumber": "%s"
                 }
-                """))
+                """.formatted(phoneNumber)))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status").value("PENDING_OTP_VERIFICATION"))
-        .andExpect(jsonPath("$.nextStep").value("VERIFY_OTP"))
-        .andExpect(jsonPath("$.phase").value(1));
+        .andExpect(jsonPath("$.role").value("TENANT"))
+        .andExpect(jsonPath("$.authMethod").value("PHONE_REGISTRATION"))
+        .andExpect(jsonPath("$.accessToken").isNotEmpty());
+  }
+
+  @Test
+  void shouldRegisterOwnerWithPhoneWhenRoleRequested() throws Exception {
+    String phoneNumber = uniquePhoneNumber();
+
+    mockMvc.perform(post("/auth/register/phone")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "fullName": "Priya Sharma",
+                  "countryCode": "+91",
+                  "phoneNumber": "%s",
+                  "role": "OWNER"
+                }
+                """.formatted(phoneNumber)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.role").value("OWNER"))
+        .andExpect(jsonPath("$.authMethod").value("PHONE_REGISTRATION"))
+        .andExpect(jsonPath("$.accessToken").isNotEmpty());
   }
 
   @Test
@@ -91,7 +113,7 @@ class AuthControllerTest {
                   "roleHint": "OWNER"
                 }
                 """))
-        .andExpect(status().isForbidden());
+        .andExpect(status().isUnauthorized());
   }
 
   @Test
@@ -146,6 +168,23 @@ class AuthControllerTest {
         """, Integer.class);
 
     assertThat(googleIdentityCount).isEqualTo(1);
+  }
+
+  @Test
+  void shouldKeepExistingGoogleUserRoleWhenOwnerRoleRequested() throws Exception {
+    mockMvc.perform(post("/auth/oauth/google")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "identityToken": "google_demo_code",
+                  "redirectUri": "http://127.0.0.1:3001/owner/register",
+                  "role": "OWNER"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.authMethod").value("GOOGLE"))
+        .andExpect(jsonPath("$.email").value("aarav@example.com"))
+        .andExpect(jsonPath("$.role").value("TENANT"));
   }
 
   @Test
@@ -258,9 +297,9 @@ class AuthControllerTest {
     mockMvc.perform(get("/api-docs"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.paths['/auth/register/phone'].post.summary")
-            .value("Start phone registration"))
+            .value("Register with phone"))
         .andExpect(jsonPath("$.paths['/auth/register/email'].post.summary")
-            .value("Start email registration"))
+            .value("Register with email"))
         .andExpect(jsonPath("$.paths['/auth/login'].post.summary")
             .value("Login with email or phone"))
         .andExpect(jsonPath("$.paths['/auth/otp/send'].post.summary")
@@ -275,5 +314,11 @@ class AuthControllerTest {
             .value("Refresh JWT or session token"))
         .andExpect(jsonPath("$.paths['/auth/logout'].post.summary")
             .value("Logout or session sign-out"));
+  }
+
+  private String uniquePhoneNumber() {
+    String nanos = Long.toString(System.nanoTime());
+    String suffix = nanos.substring(Math.max(0, nanos.length() - 9));
+    return "9" + suffix;
   }
 }

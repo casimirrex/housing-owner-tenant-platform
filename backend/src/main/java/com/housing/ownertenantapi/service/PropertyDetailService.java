@@ -75,23 +75,27 @@ public class PropertyDetailService {
             property.availabilityStatus(),
             fullAccess ? photos : previewPhotos(photos)
         ),
+        // Premium-gated pricing — only rent visible without premium; deposit,
+        // maintenance, brokerage masked to 0 to enforce the upgrade.
         new PropertyPricingResponse(
             property.rent(),
-            property.deposit(),
-            property.maintenance(),
-            property.brokerage(),
+            fullAccess ? property.deposit() : 0,
+            fullAccess ? property.maintenance() : 0,
+            fullAccess ? property.brokerage() : 0,
             property.availabilityDate()
         ),
+        // Premium-gated specs — BHK and area shown as a teaser; detailed
+        // bathrooms/balconies/floor/facing/parking masked without premium.
         new PropertySpecsResponse(
             property.bhk(),
-            property.bathrooms(),
-            property.balconies(),
-            property.areaSqFt(),
+            fullAccess ? property.bathrooms() : 0,
+            fullAccess ? property.balconies() : 0,
+            fullAccess ? property.areaSqFt() : 0,
             property.furnishing(),
-            property.floorNo(),
-            property.totalFloors(),
-            property.facing(),
-            property.parking()
+            fullAccess ? property.floorNo() : 0,
+            fullAccess ? property.totalFloors() : 0,
+            fullAccess ? property.facing() : null,
+            fullAccess ? property.parking() : null
         ),
         fullAccess ? amenities : previewAmenities(amenities),
         new PropertyTrustSignalsResponse(

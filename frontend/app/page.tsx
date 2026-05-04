@@ -35,7 +35,7 @@ export default async function HomePage() {
               <Link className="button-secondary border-white/20 bg-white/10 text-oat hover:bg-white hover:text-pine" href="/account/register">
                 Registration
               </Link>
-              <Link className="button-secondary border-white/20 bg-white/10 text-oat hover:bg-white hover:text-pine" href="/list-your-home">
+              <Link className="button-secondary border-white/20 bg-white/10 text-oat hover:bg-white hover:text-pine" href="/owner/register">
                 List your home
               </Link>
             </div>
@@ -70,7 +70,7 @@ export default async function HomePage() {
 
             <div className="section-panel">
               <p className="text-[10.5px] font-bold uppercase tracking-[0.28em] text-copper">
-                Why people use RentMate
+                Why people use Testition
               </p>
               <div className="mt-5 grid gap-4 md:grid-cols-3">
                 {[

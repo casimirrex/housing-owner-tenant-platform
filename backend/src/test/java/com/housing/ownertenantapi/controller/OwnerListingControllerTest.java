@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -24,6 +25,9 @@ class OwnerListingControllerTest {
 
   @Autowired
   private ObjectMapper objectMapper;
+
+  @Autowired
+  private JdbcTemplate jdbcTemplate;
 
   @Test
   void shouldReturnOwnerListingsForOwnerSession() throws Exception {
@@ -61,6 +65,35 @@ class OwnerListingControllerTest {
                 """))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.listingId").value(org.hamcrest.Matchers.startsWith("owner_listing_")))
+        .andExpect(jsonPath("$.status").value("DRAFT"));
+  }
+
+  @Test
+  void shouldPublishOwnerListingWhenOwnerPremiumIsActive() throws Exception {
+    activateOwnerPremiumForRohit();
+    String ownerAccessToken = login("rohit.mehta@example.com", "StrongPassword@123");
+
+    mockMvc.perform(post("/api/v1/owners/listings")
+            .header("Authorization", "Bearer " + ownerAccessToken)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "title": "Premium owner listing near HSR",
+                  "propertyType": "Apartment",
+                  "city": "Bengaluru",
+                  "locality": "HSR Layout",
+                  "rent": 42000,
+                  "deposit": 126000,
+                  "bhk": "3BHK",
+                  "furnishing": "Fully Furnished",
+                  "amenities": ["Lift", "Gym", "Security"],
+                  "photos": ["https://images.example.com/owners/premium-cover.jpg"],
+                  "lat": 12.9116,
+                  "lng": 77.6474
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.listingId").value(org.hamcrest.Matchers.startsWith("owner_listing_")))
         .andExpect(jsonPath("$.status").value("PUBLISHED"));
   }
 
@@ -88,5 +121,19 @@ class OwnerListingControllerTest {
         .getContentAsString();
 
     return objectMapper.readTree(response).path("accessToken").asText();
+  }
+
+  private void activateOwnerPremiumForRohit() {
+    jdbcTemplate.update("""
+        INSERT INTO user_subscriptions (
+          subscription_id, user_id, plan_code, status, started_at, expires_at,
+          activated_via, amount_paid, currency, payment_reference, created_at, updated_at
+        )
+        VALUES (
+          'sub_owner_premium_test_101', 'owner_101', 'OWNER_PREMIUM_ANNUAL', 'ACTIVE',
+          CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '365 days',
+          'TEST', 1000, 'INR', 'owner_listing_test', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+        """);
   }
 }

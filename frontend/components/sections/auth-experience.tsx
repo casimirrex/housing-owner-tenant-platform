@@ -50,7 +50,7 @@ export function AuthExperience({
   signupHref = "/signup",
   roleIntent,
   ownerLoginHref = "/owner/login",
-  ownerSetupHref = "/list-your-home",
+  ownerSetupHref = "/owner/register",
   tenantLoginHref = "/tenant/login"
 }: {
   authPath?: string;
@@ -104,7 +104,8 @@ export function AuthExperience({
     mutationFn: (identityToken: string) =>
       loginWithGoogle({
         identityToken,
-        redirectUri
+        redirectUri,
+        role: roleIntent
       }),
     onSuccess: (nextSession) => {
       setSession(nextSession);

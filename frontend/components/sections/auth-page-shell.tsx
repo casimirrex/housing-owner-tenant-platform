@@ -157,7 +157,7 @@ export function AuthPageShell({
               logoutHref={routeConfig.logoutHref ?? "/logout"}
               onboardingHref={routeConfig.onboardingHref ?? "/onboarding"}
               ownerLoginHref={routeConfig.ownerLoginHref ?? "/owner/login"}
-              ownerSetupHref={routeConfig.ownerSetupHref ?? "/list-your-home"}
+              ownerSetupHref={routeConfig.ownerSetupHref ?? "/owner/register"}
               tenantLoginHref={routeConfig.tenantLoginHref ?? "/tenant/login"}
             />
           ) : (
@@ -202,7 +202,7 @@ export function AuthPageShell({
                 googleHref={routeConfig.gmailLoginHref}
                 onboardingHref={routeConfig.onboardingHref ?? "/onboarding"}
                 ownerLoginHref={routeConfig.ownerLoginHref ?? "/owner/login"}
-                ownerSetupHref={routeConfig.ownerSetupHref ?? "/list-your-home"}
+                ownerSetupHref={routeConfig.ownerSetupHref ?? "/owner/register"}
                 roleIntent={routeConfig.roleIntent}
                 signupHref={routeConfig.signupHref ?? "/signup"}
                 tenantLoginHref={routeConfig.tenantLoginHref ?? "/tenant/login"}

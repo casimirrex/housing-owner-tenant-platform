@@ -1,7 +1,7 @@
-import { OwnerGetStartedExperience } from "@/components/sections/owner-get-started-experience";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default function ListYourHomePage() {
-  return <OwnerGetStartedExperience />;
+  redirect("/owner/register");
 }

@@ -11,9 +11,9 @@ export default async function OwnerLoginPage() {
     eyebrow: "Owner sign in",
     title: "Sign in to manage listings, tenants, and collections",
     description:
-      "Use the owner account created from List your home. This path is dedicated to property publishing, dashboard management, and payment collection.",
+      "Use the owner account created from owner registration. This path is dedicated to property publishing, dashboard management, and payment collection.",
     ctaLabel: "Create owner account",
-    ctaHref: "/list-your-home",
+    ctaHref: "/owner/register",
     sections: [
       {
         heading: "Use the owner account only",
@@ -45,9 +45,9 @@ export default async function OwnerLoginPage() {
         logoutHref: "/account/logout",
         onboardingHref: "/owner/dashboard",
         ownerLoginHref: "/owner/login",
-        ownerSetupHref: "/list-your-home",
+        ownerSetupHref: "/owner/register",
         roleIntent: "OWNER",
-        signupHref: "/list-your-home",
+        signupHref: "/owner/register",
         tenantLoginHref: "/tenant/login"
       }}
     />

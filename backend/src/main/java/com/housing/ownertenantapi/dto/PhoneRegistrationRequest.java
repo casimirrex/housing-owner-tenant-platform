@@ -13,6 +13,8 @@ public record PhoneRegistrationRequest(
     String countryCode,
     @Schema(description = "Phone number", example = "9876543210")
     @NotBlank
-    String phoneNumber
+    String phoneNumber,
+    @Schema(description = "Requested account role. Defaults to TENANT.", example = "OWNER")
+    String role
 ) {
 }

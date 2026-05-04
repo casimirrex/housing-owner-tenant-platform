@@ -249,7 +249,12 @@ export function login(request: { identifier: string; password: string; roleHint?
   });
 }
 
-export function registerWithEmail(request: { fullName: string; email: string }) {
+export function registerWithEmail(request: {
+  fullName: string;
+  email: string;
+  password: string;
+  role?: "TENANT" | "OWNER";
+}) {
   return fetchJson<AuthSessionResponse>("/auth/register/email", {
     method: "POST",
     body: JSON.stringify(request)
@@ -260,6 +265,7 @@ export function registerWithPhone(request: {
   fullName: string;
   countryCode: string;
   phoneNumber: string;
+  role?: "TENANT" | "OWNER";
 }) {
   return fetchJson<AuthSessionResponse>("/auth/register/phone", {
     method: "POST",
@@ -294,6 +300,7 @@ export function loginWithGoogle(request: {
   authorizationCode?: string;
   codeVerifier?: string;
   redirectUri: string;
+  role?: "TENANT" | "OWNER";
 }) {
   return fetchJson<AuthSessionResponse>("/auth/oauth/google", {
     method: "POST",
@@ -656,6 +663,26 @@ export function getTenantPremiumAccess(accessToken?: string) {
 export function activateTenantPremium(accessToken?: string) {
   return fetchJson<TenantPremiumActivationResponse>(
     "/api/v1/subscriptions/tenant-premium/activate",
+    {
+      method: "POST"
+    },
+    {},
+    accessToken
+  );
+}
+
+export function getOwnerPremiumAccess(accessToken?: string) {
+  return fetchJson<TenantPremiumAccessResponse>(
+    "/api/v1/subscriptions/owner-premium",
+    undefined,
+    {},
+    accessToken
+  );
+}
+
+export function activateOwnerPremium(accessToken?: string) {
+  return fetchJson<TenantPremiumActivationResponse>(
+    "/api/v1/subscriptions/owner-premium/activate",
     {
       method: "POST"
     },

@@ -19,14 +19,25 @@ import { useAuthStore } from "@/store/auth-store";
 /**
  * Owner-only registration experience for the dedicated /owner/register page.
  * Implements UC-007. Locks the role intent to OWNER and routes successful
- * sign-ups directly into the owner dashboard. Tenants are redirected to
+ * sign-ups directly into the add-property flow. Tenants are redirected to
  * /tenant/register with FR-26 cross-workspace guidance.
  */
 
-const emailSchema = z.object({
-  fullName: z.string().min(2, "Enter your full name"),
-  email: z.string().email("Enter a valid email address")
-});
+const OWNER_FIRST_LISTING_PATH = "/owner/listings/new";
+const OWNER_REGISTRATION_SUCCESS =
+  "Owner account created successfully. Taking you to the add-property page to publish your first home.";
+
+const emailSchema = z
+  .object({
+    fullName: z.string().min(2, "Enter your full name"),
+    email: z.string().email("Enter a valid email address"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string().min(8, "Confirm your password")
+  })
+  .refine((values) => values.password === values.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match"
+  });
 
 const phoneSchema = z.object({
   fullName: z.string().min(2, "Enter your full name"),
@@ -46,7 +57,7 @@ export function OwnerRegistrationExperience() {
 
   const emailForm = useForm<EmailValues>({
     resolver: zodResolver(emailSchema),
-    defaultValues: { fullName: "", email: "" }
+    defaultValues: { fullName: "", email: "", password: "", confirmPassword: "" }
   });
 
   const phoneForm = useForm<PhoneValues>({
@@ -67,7 +78,14 @@ export function OwnerRegistrationExperience() {
   };
 
   const emailMutation = useMutation({
-    mutationFn: (values: EmailValues) => registerWithEmail(values),
+    mutationFn: (values: EmailValues) => {
+      return registerWithEmail({
+        fullName: values.fullName,
+        email: values.email,
+        password: values.password,
+        role: "OWNER"
+      });
+    },
     onSuccess: (response) => {
       setSession(response);
       setPageError(null);
@@ -78,16 +96,15 @@ export function OwnerRegistrationExperience() {
         router.replace("/tenant/dashboard");
         return;
       }
-      setPageNotice(
-        "Owner account created! Taking you to your owner dashboard where you can add your first property…"
-      );
-      router.replace("/owner/dashboard");
+      setPageNotice(OWNER_REGISTRATION_SUCCESS);
+      setStatusMessage(OWNER_REGISTRATION_SUCCESS);
+      router.replace(OWNER_FIRST_LISTING_PATH);
     },
     onError: handleAuthError
   });
 
   const phoneMutation = useMutation({
-    mutationFn: (values: PhoneValues) => registerWithPhone(values),
+    mutationFn: (values: PhoneValues) => registerWithPhone({ ...values, role: "OWNER" }),
     onSuccess: (response) => {
       setSession(response);
       setPageError(null);
@@ -95,7 +112,9 @@ export function OwnerRegistrationExperience() {
         router.replace("/tenant/dashboard");
         return;
       }
-      router.replace("/owner/dashboard");
+      setPageNotice(OWNER_REGISTRATION_SUCCESS);
+      setStatusMessage(OWNER_REGISTRATION_SUCCESS);
+      router.replace(OWNER_FIRST_LISTING_PATH);
     },
     onError: handleAuthError
   });
@@ -106,7 +125,7 @@ export function OwnerRegistrationExperience() {
         typeof window === "undefined"
           ? "http://127.0.0.1:3001/owner/register"
           : `${window.location.origin}/owner/register`;
-      return loginWithGoogle({ identityToken, redirectUri });
+      return loginWithGoogle({ identityToken, redirectUri, role: "OWNER" });
     },
     onSuccess: (response) => {
       setSession(response);
@@ -118,7 +137,8 @@ export function OwnerRegistrationExperience() {
         router.replace("/tenant/dashboard");
         return;
       }
-      router.replace("/owner/dashboard");
+      setStatusMessage(OWNER_REGISTRATION_SUCCESS);
+      router.replace(OWNER_FIRST_LISTING_PATH);
     },
     onError: handleAuthError
   });
@@ -295,6 +315,30 @@ export function OwnerRegistrationExperience() {
                 />
                 <span className="mt-2 block text-xs text-copper">
                   {emailForm.formState.errors.email?.message}
+                </span>
+              </label>
+              <label className="field-label">
+                Password
+                <input
+                  className="form-control mt-2"
+                  type="password"
+                  placeholder="At least 8 characters"
+                  {...emailForm.register("password")}
+                />
+                <span className="mt-2 block text-xs text-copper">
+                  {emailForm.formState.errors.password?.message}
+                </span>
+              </label>
+              <label className="field-label">
+                Confirm password
+                <input
+                  className="form-control mt-2"
+                  type="password"
+                  placeholder="Re-enter your password"
+                  {...emailForm.register("confirmPassword")}
+                />
+                <span className="mt-2 block text-xs text-copper">
+                  {emailForm.formState.errors.confirmPassword?.message}
                 </span>
               </label>
               <button

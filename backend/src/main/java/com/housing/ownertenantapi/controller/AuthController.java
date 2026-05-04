@@ -35,13 +35,13 @@ public class AuthController {
   }
 
   @PostMapping("/register/phone")
-  @Operation(summary = "Register with phone", description = "Creates a new tenant account with a phone number and returns an authenticated session immediately")
+  @Operation(summary = "Register with phone", description = "Creates a new tenant or owner account with a phone number and returns an authenticated session immediately")
   public AuthSessionResponse registerWithPhone(@Valid @RequestBody PhoneRegistrationRequest request) {
     return authService.registerWithPhone(request);
   }
 
   @PostMapping("/register/email")
-  @Operation(summary = "Register with email", description = "Creates a new tenant account with an email address and returns an authenticated session immediately")
+  @Operation(summary = "Register with email", description = "Creates a new tenant or owner account with an email address and returns an authenticated session immediately")
   public AuthSessionResponse registerWithEmail(@Valid @RequestBody EmailRegistrationRequest request) {
     return authService.registerWithEmail(request);
   }

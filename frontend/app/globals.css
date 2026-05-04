@@ -175,6 +175,7 @@ footer,
     overflow: hidden;
     border-radius: 2rem;
     border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--oat);
     background:
       linear-gradient(148deg,
         #0A1628 0%,

@@ -4,13 +4,15 @@ import Link from "next/link";
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle, Home, MapPinned, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowLeft, CheckCircle, Crown, Home, MapPinned, ShieldCheck, Sparkles, Wallet, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import {
   createOwnerListing,
   getCurrentUserProfile,
-  getOwnerListings
+  getOwnerListings,
+  getOwnerPremiumAccess,
+  activateOwnerPremium
 } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -62,7 +64,7 @@ function cityCoordinates(city: string) {
 
 export function OwnerPropertyCreateExperience() {
   const queryClient = useQueryClient();
-  const { session } = useAuthStore();
+  const { session, statusMessage, setStatusMessage } = useAuthStore();
   const accessToken = session?.accessToken;
   const [listingMsg, setListingMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [latestListingId, setLatestListingId] = useState<string | null>(null);
@@ -76,6 +78,12 @@ export function OwnerPropertyCreateExperience() {
   const listingsQuery = useQuery({
     queryKey: ["owner-listings", accessToken ?? "guest"],
     queryFn: () => getOwnerListings({ page: 0, pageSize: 6 }, accessToken),
+    enabled: Boolean(accessToken)
+  });
+
+  const ownerPremiumQuery = useQuery({
+    queryKey: ["owner-premium", accessToken ?? "guest"],
+    queryFn: () => getOwnerPremiumAccess(accessToken),
     enabled: Boolean(accessToken)
   });
 
@@ -120,7 +128,10 @@ export function OwnerPropertyCreateExperience() {
       setLatestListingId(data.listingId);
       setListingMsg({
         type: "success",
-        text: `Listing published successfully. It is now available in renter discovery and your owner inventory.`
+        text:
+          data.status === "PUBLISHED"
+            ? "Listing published successfully. It is now available in renter discovery and your owner inventory."
+            : "Property draft saved. Activate Owner Premium from your wallet when you are ready to publish it."
       });
       queryClient.invalidateQueries({ queryKey: ["owner-listings", accessToken ?? "guest"] });
       form.reset({
@@ -133,6 +144,21 @@ export function OwnerPropertyCreateExperience() {
       setListingMsg({
         type: "error",
         text: error instanceof Error ? error.message : "Property publishing failed. Please try again."
+      });
+    }
+  });
+
+  const activateOwnerPremiumMutation = useMutation({
+    mutationFn: () => activateOwnerPremium(accessToken),
+    onSuccess: (res) => {
+      setListingMsg({ type: "success", text: res.message });
+      queryClient.invalidateQueries({ queryKey: ["owner-premium", accessToken ?? "guest"] });
+      queryClient.invalidateQueries({ queryKey: ["wallet-dashboard", accessToken ?? "guest"] });
+    },
+    onError: (error) => {
+      setListingMsg({
+        type: "error",
+        text: error instanceof Error ? error.message : "Could not activate Owner Premium."
       });
     }
   });
@@ -151,7 +177,7 @@ export function OwnerPropertyCreateExperience() {
             <Link className="button-accent" href="/owner/login">
               Owner sign in
             </Link>
-            <Link className="button-secondary border-white/20 bg-white/10 text-oat hover:bg-white hover:text-pine" href="/list-your-home">
+            <Link className="button-secondary border-white/20 bg-white/10 text-oat hover:bg-white hover:text-pine" href="/owner/register">
               Create owner account
             </Link>
           </div>
@@ -195,7 +221,20 @@ export function OwnerPropertyCreateExperience() {
     );
   }
 
+  const ownerPremium = ownerPremiumQuery.data;
+
+  if (ownerPremiumQuery.isLoading) {
+    return (
+      <main className="mx-auto max-w-6xl px-6 py-12">
+        <section className="section-panel">
+          <p className="text-sm text-ink/70">Checking Owner Premium status…</p>
+        </section>
+      </main>
+    );
+  }
+
   const listings = listingsQuery.data?.items ?? [];
+  const ownerPremiumActive = ownerPremium?.premiumActive === true;
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-12">
@@ -207,8 +246,9 @@ export function OwnerPropertyCreateExperience() {
               Add a new property from a proper owner publishing page.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-oat/76">
-              Use this page for the full property setup flow. Once published, the listing becomes
-              part of renter discovery, search, and your live owner inventory.
+              {ownerPremiumActive
+                ? "Use this page for the full property setup flow. Once published, the listing becomes part of renter discovery, search, and your live owner inventory."
+                : "Use this page to save the property details as a draft first. Owner Premium is required only when you are ready to publish it for renters."}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link className="button-accent" href="/owner/dashboard">
@@ -228,7 +268,11 @@ export function OwnerPropertyCreateExperience() {
             <div className="mt-5 grid gap-4 text-sm leading-7 text-oat/76">
               <p>Choose the city first so the property is routed into the right renter discovery feed.</p>
               <p>Use a strong listing title, realistic rent, and at least one clear photo URL.</p>
-              <p>Publish once, then return to the owner dashboard to manage listings and tenant payments.</p>
+              <p>
+                {ownerPremiumActive
+                  ? "Publish once, then return to the owner dashboard to manage listings and tenant payments."
+                  : "Save the draft now, then activate Owner Premium from wallet before renter visibility is switched on."}
+              </p>
             </div>
           </div>
         </div>
@@ -239,10 +283,13 @@ export function OwnerPropertyCreateExperience() {
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-copper">
             Property details
           </p>
-          <h2 className="mt-2 text-2xl font-semibold text-ink">Publish a home with the essentials first</h2>
+          <h2 className="mt-2 text-2xl font-semibold text-ink">
+            {ownerPremiumActive ? "Publish a home with the essentials first" : "Save a property draft with the essentials first"}
+          </h2>
           <p className="mt-3 text-sm leading-6 text-ink/72">
-            This flow is tuned for speed: capture the main details now, then refine the listing
-            further from the dashboard once it is live.
+            {ownerPremiumActive
+              ? "This flow is tuned for speed: capture the main details now, then refine the listing further from the dashboard once it is live."
+              : "This flow is tuned for speed: capture the main details now, then publish from the premium owner flow once your wallet payment is complete."}
           </p>
 
           {listingMsg ? (
@@ -288,6 +335,73 @@ export function OwnerPropertyCreateExperience() {
               >
                 <X className="h-4 w-4" />
               </button>
+            </div>
+          ) : null}
+
+          {statusMessage ? (
+            <div className="mt-5 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-600" />
+              <p className="flex-1 text-sm font-medium text-emerald-700">{statusMessage}</p>
+              <button
+                type="button"
+                onClick={() => setStatusMessage(null)}
+                className="flex-shrink-0 text-ink/40 hover:text-ink"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : null}
+
+          {ownerPremiumQuery.isError ? (
+            <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {ownerPremiumQuery.error instanceof Error
+                ? ownerPremiumQuery.error.message
+                : "Could not load Owner Premium status."}
+            </div>
+          ) : null}
+
+          {!ownerPremiumActive && ownerPremium ? (
+            <div className="mt-5 rounded-xl border border-copper/20 bg-copper/8 p-5">
+              <div className="flex items-center gap-3">
+                <Crown className="h-5 w-5 text-copper" />
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-copper">
+                  Draft mode
+                </p>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-ink/72">
+                You can save this property as a draft now. Activate Owner Premium from wallet to publish it into renter search and property detail pages.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-black/8 bg-white px-4 py-3">
+                  <p className="text-xs uppercase tracking-[0.16em] text-ink/48">Wallet balance</p>
+                  <p className="mt-2 text-base font-semibold text-ink">{ownerPremium.walletBalanceFormatted}</p>
+                  {ownerPremium.shortfallAmount > 0 ? (
+                    <p className="mt-1 text-sm text-copper">
+                      Add {formatCurrency(ownerPremium.shortfallAmount)} more before publishing.
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm text-ink/62">Wallet is ready for Owner Premium.</p>
+                  )}
+                </div>
+                <div className="flex flex-col justify-center gap-3">
+                  {ownerPremium.canActivate ? (
+                    <button
+                      className="button-primary justify-center"
+                      disabled={activateOwnerPremiumMutation.isPending}
+                      onClick={() => activateOwnerPremiumMutation.mutate()}
+                      type="button"
+                    >
+                      <Crown className="h-4 w-4" />
+                      {activateOwnerPremiumMutation.isPending ? "Activating…" : "Pay Owner Premium"}
+                    </button>
+                  ) : (
+                    <Link className="button-primary justify-center" href="/wallet">
+                      <Wallet className="h-4 w-4" />
+                      Top up wallet
+                    </Link>
+                  )}
+                </div>
+              </div>
             </div>
           ) : null}
 
@@ -347,7 +461,7 @@ export function OwnerPropertyCreateExperience() {
               <div>
                 <p className="text-sm font-semibold text-ink">Pricing and readiness</p>
                 <p className="mt-1 text-sm leading-6 text-ink/68">
-                  Use the real rent and deposit so the listing goes live with trustworthy pricing.
+                  Use the real rent and deposit so the property has trustworthy pricing when it is published.
                 </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-3">
@@ -392,7 +506,13 @@ export function OwnerPropertyCreateExperience() {
             </div>
 
             <button className="button-primary mt-2" disabled={createListingMutation.isPending} type="submit">
-              {createListingMutation.isPending ? "Publishing property..." : "Publish property"}
+              {createListingMutation.isPending
+                ? ownerPremiumActive
+                  ? "Publishing property..."
+                  : "Saving draft..."
+                : ownerPremiumActive
+                  ? "Publish property"
+                  : "Save property draft"}
             </button>
           </form>
         </div>
@@ -436,7 +556,7 @@ export function OwnerPropertyCreateExperience() {
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-copper">
               Recent owner inventory
             </p>
-            <h2 className="mt-2 text-2xl font-semibold text-ink">What is already live</h2>
+            <h2 className="mt-2 text-2xl font-semibold text-ink">Your current inventory</h2>
             <div className="mt-6 grid gap-4">
               {listings.length > 0 ? (
                 listings.map((listing) => (
@@ -459,7 +579,7 @@ export function OwnerPropertyCreateExperience() {
                 ))
               ) : (
                 <p className="text-sm leading-6 text-ink/70">
-                  Your live owner listings will appear here once you publish the first one.
+                  Your owner listings and drafts will appear here once you save the first property.
                 </p>
               )}
             </div>

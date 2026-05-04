@@ -19,10 +19,17 @@ import { useAuthStore } from "@/store/auth-store";
  * to /owner/register instead (see FR-26 dual-role-email guard).
  */
 
-const emailSchema = z.object({
-  fullName: z.string().min(2, "Enter your full name"),
-  email: z.string().email("Enter a valid email address")
-});
+const emailSchema = z
+  .object({
+    fullName: z.string().min(2, "Enter your full name"),
+    email: z.string().email("Enter a valid email address"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string().min(8, "Confirm your password")
+  })
+  .refine((values) => values.password === values.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match"
+  });
 
 const phoneSchema = z.object({
   fullName: z.string().min(2, "Enter your full name"),
@@ -33,6 +40,9 @@ const phoneSchema = z.object({
 type EmailValues = z.infer<typeof emailSchema>;
 type PhoneValues = z.infer<typeof phoneSchema>;
 
+const TENANT_REGISTRATION_SUCCESS =
+  "Tenant account created successfully. Taking you to your dashboard.";
+
 export function TenantRegistrationExperience() {
   const router = useRouter();
   const { session, setSession, setStatusMessage } = useAuthStore();
@@ -42,7 +52,7 @@ export function TenantRegistrationExperience() {
 
   const emailForm = useForm<EmailValues>({
     resolver: zodResolver(emailSchema),
-    defaultValues: { fullName: "", email: "" }
+    defaultValues: { fullName: "", email: "", password: "", confirmPassword: "" }
   });
 
   const phoneForm = useForm<PhoneValues>({
@@ -67,7 +77,14 @@ export function TenantRegistrationExperience() {
   };
 
   const emailMutation = useMutation({
-    mutationFn: (values: EmailValues) => registerWithEmail(values),
+    mutationFn: (values: EmailValues) => {
+      return registerWithEmail({
+        fullName: values.fullName,
+        email: values.email,
+        password: values.password,
+        role: "TENANT"
+      });
+    },
     onSuccess: (response) => {
       setSession(response);
       setPageError(null);
@@ -80,14 +97,15 @@ export function TenantRegistrationExperience() {
         router.replace("/owner/dashboard");
         return;
       }
-      setPageNotice("Tenant account created! Taking you to your dashboard…");
+      setPageNotice(TENANT_REGISTRATION_SUCCESS);
+      setStatusMessage(TENANT_REGISTRATION_SUCCESS);
       redirectToTenant();
     },
     onError: handleAuthError
   });
 
   const phoneMutation = useMutation({
-    mutationFn: (values: PhoneValues) => registerWithPhone(values),
+    mutationFn: (values: PhoneValues) => registerWithPhone({ ...values, role: "TENANT" }),
     onSuccess: (response) => {
       setSession(response);
       setPageError(null);
@@ -95,7 +113,8 @@ export function TenantRegistrationExperience() {
         router.replace("/owner/dashboard");
         return;
       }
-      setPageNotice("Tenant account created! Taking you to your dashboard…");
+      setPageNotice(TENANT_REGISTRATION_SUCCESS);
+      setStatusMessage(TENANT_REGISTRATION_SUCCESS);
       redirectToTenant();
     },
     onError: handleAuthError
@@ -107,7 +126,7 @@ export function TenantRegistrationExperience() {
         typeof window === "undefined"
           ? "http://127.0.0.1:3001/tenant/register"
           : `${window.location.origin}/tenant/register`;
-      return loginWithGoogle({ identityToken, redirectUri });
+      return loginWithGoogle({ identityToken, redirectUri, role: "TENANT" });
     },
     onSuccess: (response) => {
       setSession(response);
@@ -119,6 +138,7 @@ export function TenantRegistrationExperience() {
         router.replace("/owner/dashboard");
         return;
       }
+      setStatusMessage(TENANT_REGISTRATION_SUCCESS);
       redirectToTenant();
     },
     onError: handleAuthError
@@ -296,6 +316,30 @@ export function TenantRegistrationExperience() {
                 />
                 <span className="mt-2 block text-xs text-copper">
                   {emailForm.formState.errors.email?.message}
+                </span>
+              </label>
+              <label className="field-label">
+                Password
+                <input
+                  className="form-control mt-2"
+                  type="password"
+                  placeholder="At least 8 characters"
+                  {...emailForm.register("password")}
+                />
+                <span className="mt-2 block text-xs text-copper">
+                  {emailForm.formState.errors.password?.message}
+                </span>
+              </label>
+              <label className="field-label">
+                Confirm password
+                <input
+                  className="form-control mt-2"
+                  type="password"
+                  placeholder="Re-enter your password"
+                  {...emailForm.register("confirmPassword")}
+                />
+                <span className="mt-2 block text-xs text-copper">
+                  {emailForm.formState.errors.confirmPassword?.message}
                 </span>
               </label>
               <button

@@ -26,7 +26,7 @@ export default async function TenantLoginPage() {
         signupHref: "/account/register",
         onboardingHref: "/account/onboarding",
         ownerLoginHref: "/owner/login",
-        ownerSetupHref: "/list-your-home",
+        ownerSetupHref: "/owner/register",
         roleIntent: "TENANT",
         tenantLoginHref: "/tenant/login"
       }}

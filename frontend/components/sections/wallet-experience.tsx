@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Wallet,
@@ -11,7 +11,8 @@ import {
   ShieldCheck,
   CheckCircle,
   Clock,
-  ArrowDownCircle
+  ArrowDownCircle,
+  Crown
 } from "lucide-react";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -23,7 +24,11 @@ import {
 import {
   getWalletDashboard,
   createWalletTopupCheckout,
-  verifyWalletTopup
+  verifyWalletTopup,
+  getTenantPremiumAccess,
+  activateTenantPremium,
+  getOwnerPremiumAccess,
+  activateOwnerPremium
 } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth-store";
 import type { WalletTopupCheckoutResponse } from "@/lib/api/types";
@@ -185,6 +190,215 @@ function StripeTopupForm({ checkout, onSuccess, onCancel }: StripeFormProps) {
   );
 }
 
+/* ─── Demo card payment form (cosmetic, MOCK mode only) ──────────────────── */
+/**
+ * Visual-only credit card form for the demo. Card number, expiry, and CVV are
+ * NEVER sent to the backend or stored anywhere — they exist purely to make the
+ * demo look like a real payment form. On submit, this calls the existing
+ * MOCK-mode top-up flow which auto-credits the wallet server-side.
+ *
+ * To switch to the real PCI-compliant Stripe Elements form, set
+ * PAYMENT_PROVIDER=STRIPE in the backend .env and provide real Stripe keys.
+ */
+interface DemoCardPaymentFormProps {
+  checkout: WalletTopupCheckoutResponse;
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+// Pre-filled demo values — visible to the user so the client can run the flow
+// without any typing. All four fields stay editable if they want to change them.
+const DEMO_CARDHOLDER = "DEMO USER";
+const DEMO_CARD_NUMBER = "4242 4242 4242 4242";
+const DEMO_EXPIRY = "12/34";
+const DEMO_CVV = "123";
+
+function DemoCardPaymentForm({ checkout, onSuccess, onCancel }: DemoCardPaymentFormProps) {
+  const [cardholder, setCardholder] = useState(DEMO_CARDHOLDER);
+  const [cardNumber, setCardNumber] = useState(DEMO_CARD_NUMBER);
+  const [expiry, setExpiry] = useState(DEMO_EXPIRY);
+  const [cvv, setCvv] = useState(DEMO_CVV);
+  const [processing, setProcessing] = useState(false);
+
+  const fillDemoValues = () => {
+    setCardholder(DEMO_CARDHOLDER);
+    setCardNumber(DEMO_CARD_NUMBER);
+    setExpiry(DEMO_EXPIRY);
+    setCvv(DEMO_CVV);
+  };
+
+  const formatCardNumber = (value: string) =>
+    value
+      .replace(/\D/g, "")
+      .slice(0, 16)
+      .replace(/(\d{4})(?=\d)/g, "$1 ")
+      .trim();
+
+  const formatExpiry = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 4);
+    if (digits.length <= 2) return digits;
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  };
+
+  const isValid =
+    cardholder.trim().length >= 2 &&
+    cardNumber.replace(/\s/g, "").length === 16 &&
+    /^\d{2}\/\d{2}$/.test(expiry) &&
+    /^\d{3,4}$/.test(cvv);
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!isValid || processing) return;
+    setProcessing(true);
+    // Small artificial delay so the UX feels like a real payment
+    setTimeout(() => {
+      onSuccess();
+    }, 700);
+  };
+
+  const cardLast4 = cardNumber.replace(/\s/g, "").slice(-4) || "••••";
+
+  return (
+    <form className="space-y-4" onSubmit={handleSubmit}>
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800">
+        <p>
+          <strong>Demo payment</strong> — sandbox only, no real card data is
+          transmitted or stored. We&apos;ve pre-filled the demo card values
+          below; just click <strong>Pay</strong> to continue.
+        </p>
+        <div className="mt-2 grid gap-1 font-mono text-[11px] text-amber-900">
+          <p>
+            Card: <strong>{DEMO_CARD_NUMBER}</strong>
+          </p>
+          <p>
+            Expiry: <strong>{DEMO_EXPIRY}</strong> &nbsp;·&nbsp; CVV:{" "}
+            <strong>{DEMO_CVV}</strong>
+          </p>
+        </div>
+        <button
+          className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-900 underline-offset-2 hover:underline"
+          onClick={fillDemoValues}
+          type="button"
+        >
+          Reset to demo values
+        </button>
+      </div>
+
+      {/* Visual card preview */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-navy via-navy to-pine p-5 text-oat shadow-soft">
+        <div className="flex items-start justify-between">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.32em] opacity-80">
+            Demo Card
+          </p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-90">VISA</p>
+        </div>
+        <p className="mt-7 font-mono text-lg tracking-[0.18em]">
+          {cardNumber || "•••• •••• •••• ••••"}
+        </p>
+        <div className="mt-5 flex items-end justify-between text-[10px] uppercase tracking-[0.18em] opacity-80">
+          <div>
+            <p className="opacity-70">Cardholder</p>
+            <p className="mt-1 text-sm font-semibold tracking-normal">
+              {cardholder || "YOUR NAME"}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="opacity-70">Expires</p>
+            <p className="mt-1 text-sm font-semibold tracking-normal">{expiry || "MM/YY"}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Form inputs */}
+      <label className="block">
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-ink/60">
+          Cardholder name
+        </span>
+        <input
+          autoComplete="cc-name"
+          className="form-control mt-1.5 w-full"
+          onChange={(e) => setCardholder(e.target.value.toUpperCase())}
+          placeholder="FULL NAME ON CARD"
+          type="text"
+          value={cardholder}
+        />
+      </label>
+
+      <label className="block">
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-ink/60">
+          Card number
+        </span>
+        <input
+          autoComplete="cc-number"
+          className="form-control mt-1.5 w-full font-mono tracking-[0.12em]"
+          inputMode="numeric"
+          onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+          placeholder="4242 4242 4242 4242"
+          type="text"
+          value={cardNumber}
+        />
+      </label>
+
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-ink/60">
+            Expiry (MM/YY)
+          </span>
+          <input
+            autoComplete="cc-exp"
+            className="form-control mt-1.5 w-full font-mono"
+            inputMode="numeric"
+            onChange={(e) => setExpiry(formatExpiry(e.target.value))}
+            placeholder="12/34"
+            type="text"
+            value={expiry}
+          />
+        </label>
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-ink/60">
+            CVV
+          </span>
+          <input
+            autoComplete="cc-csc"
+            className="form-control mt-1.5 w-full font-mono"
+            inputMode="numeric"
+            maxLength={4}
+            onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            placeholder="123"
+            type="text"
+            value={cvv}
+          />
+        </label>
+      </div>
+
+      <div className="flex gap-3 pt-2">
+        <button
+          className="button-primary flex-1"
+          disabled={!isValid || processing}
+          type="submit"
+        >
+          {processing
+            ? "Processing payment…"
+            : `Pay ${fmtAmount(checkout.amount, checkout.currency)} now`}
+        </button>
+        <button
+          className="button-secondary px-4"
+          disabled={processing}
+          onClick={onCancel}
+          type="button"
+        >
+          Cancel
+        </button>
+      </div>
+
+      <div className="flex items-center justify-center gap-2 text-[11px] text-ink/40">
+        <Lock className="h-3 w-3" />
+        <span>Demo payment · ending in {cardLast4}</span>
+      </div>
+    </form>
+  );
+}
+
 /* ─── Top-up modal ────────────────────────────────────────────────────────── */
 interface TopupModalProps {
   checkout: WalletTopupCheckoutResponse;
@@ -257,25 +471,12 @@ function TopupModal({ checkout, onSuccess, onClose }: TopupModalProps) {
               />
             </Elements>
           ) : (
-            /* MOCK / sandbox */
-            <div className="space-y-4">
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                <strong>Sandbox mode active</strong> — no real charge will be made.
-                Click below to simulate a successful top-up.
-              </div>
-              <div className="flex gap-3">
-                <button
-                  className="button-primary flex-1"
-                  onClick={() => onSuccess("mock_pi_" + checkout.txnId)}
-                  type="button"
-                >
-                  Simulate ₹ top-up
-                </button>
-                <button className="button-secondary px-4" onClick={onClose} type="button">
-                  Cancel
-                </button>
-              </div>
-            </div>
+            /* MOCK / sandbox — demo card form */
+            <DemoCardPaymentForm
+              checkout={checkout}
+              onSuccess={() => onSuccess("mock_pi_" + checkout.txnId)}
+              onCancel={onClose}
+            />
           )}
         </div>
 
@@ -332,6 +533,58 @@ export function WalletExperience() {
 
   const data       = walletQuery.data;
   const currency   = data?.currency ?? "INR";
+  const accountRole = session?.role === "OWNER" ? "OWNER" : "TENANT";
+  const premiumTitle = accountRole === "OWNER" ? "Owner Premium" : "Tenant Premium";
+
+  const premiumQuery = useQuery({
+    queryKey: ["wallet-premium-access", accountRole, accessToken ?? "guest"],
+    queryFn: () =>
+      accountRole === "OWNER"
+        ? getOwnerPremiumAccess(accessToken)
+        : getTenantPremiumAccess(accessToken),
+    enabled: Boolean(accessToken)
+  });
+
+  const refreshWalletAndPremiumState = async () => {
+    const walletKey = ["wallet-dashboard", accessToken ?? "guest"];
+    const walletPremiumKey = ["wallet-premium-access", accountRole, accessToken ?? "guest"];
+    const rolePremiumKey = accountRole === "OWNER" ? ["owner-premium"] : ["tenant-premium"];
+
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: walletKey }),
+      queryClient.invalidateQueries({ queryKey: walletPremiumKey }),
+      queryClient.invalidateQueries({ queryKey: rolePremiumKey }),
+      queryClient.invalidateQueries({ queryKey: ["property-detail"] })
+    ]);
+
+    await Promise.all([
+      walletQuery.refetch(),
+      premiumQuery.refetch()
+    ]);
+  };
+
+  const premiumAccess = premiumQuery.data;
+  const effectiveWalletBalance =
+    data?.balance ?? premiumAccess?.walletBalance ?? 0;
+  const effectiveWalletBalanceFormatted =
+    data?.balanceFormatted ??
+    premiumAccess?.walletBalanceFormatted ??
+    fmtAmount(effectiveWalletBalance, currency);
+  const effectiveShortfallAmount =
+    premiumAccess && !premiumAccess.premiumActive
+      ? Math.max(0, premiumAccess.priceAmount - effectiveWalletBalance)
+      : 0;
+  const walletActivationUnavailable =
+    premiumAccess?.message.toLowerCase().includes("only in local development") ?? false;
+  const canPayPremiumFromWallet =
+    Boolean(premiumAccess) &&
+    !premiumAccess?.premiumActive &&
+    !walletActivationUnavailable &&
+    (premiumAccess?.canActivate === true || effectiveShortfallAmount === 0);
+  const premiumReadinessMessage =
+    premiumAccess && canPayPremiumFromWallet && !premiumAccess.canActivate
+      ? `Your wallet balance is ready. You can activate ${premiumTitle} immediately.`
+      : premiumAccess?.message;
 
   /* Resolved amount in rupees */
   const resolvedAmount = useMemo<number | null>(() => {
@@ -345,15 +598,13 @@ export function WalletExperience() {
   const verifyMutation = useMutation({
     mutationFn: (req: { txnId: string; paymentIntentId: string }) =>
       verifyWalletTopup(req, accessToken),
-    onSuccess: (res) => {
+    onSuccess: async (res) => {
       setApiError(null);
       setSuccessMsg(res.message ?? "Wallet topped up successfully!");
       setCheckout(null);
       setSelectedPreset(null);
       setCustomRupees("");
-      queryClient.invalidateQueries({
-        queryKey: ["wallet-dashboard", accessToken ?? "guest"]
-      });
+      await refreshWalletAndPremiumState();
     },
     onError: (err) => {
       setApiError(err instanceof Error ? err.message : "Verification failed. Please try again.");
@@ -371,6 +622,25 @@ export function WalletExperience() {
     },
     onError: (err) => {
       setApiError(err instanceof Error ? err.message : "Could not start checkout. Please try again.");
+    }
+  });
+
+  const premiumMutation = useMutation({
+    mutationFn: () =>
+      accountRole === "OWNER"
+        ? activateOwnerPremium(accessToken)
+        : activateTenantPremium(accessToken),
+    onSuccess: async (res) => {
+      setApiError(null);
+      setSuccessMsg(res.message);
+      await refreshWalletAndPremiumState();
+    },
+    onError: (err) => {
+      setApiError(
+        err instanceof Error
+          ? err.message
+          : `Could not activate ${premiumTitle}. Please try again.`
+      );
     }
   });
 
@@ -484,6 +754,101 @@ export function WalletExperience() {
               </div>
             </div>
           </div>
+        </section>
+
+        {/* ── Premium payment from wallet ── */}
+        <section className="mt-8 section-panel">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3">
+                <Crown className="h-5 w-5 text-copper" />
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-copper">
+                  Premium payment
+                </p>
+              </div>
+              <h2 className="mt-3 text-2xl font-semibold text-ink">
+                Pay {premiumTitle} from wallet
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/70">
+                {accountRole === "OWNER"
+                  ? "Owner Premium is required before publishing listings. The fee is deducted directly from your wallet balance."
+                  : "Tenant Premium unlocks full property details. The fee is deducted directly from your wallet balance."}
+              </p>
+            </div>
+            <Link className="button-secondary" href={accountRole === "OWNER" ? "/owner/dashboard" : "/search"}>
+              {accountRole === "OWNER" ? "Owner dashboard" : "Browse homes"}
+            </Link>
+          </div>
+
+          {premiumQuery.isLoading ? (
+            <p className="mt-5 text-sm text-ink/60">Checking premium status…</p>
+          ) : null}
+
+          {premiumQuery.isError ? (
+            <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {premiumQuery.error instanceof Error
+                ? premiumQuery.error.message
+                : "Could not load premium status."}
+            </div>
+          ) : null}
+
+          {premiumAccess ? (
+            <div className="mt-6 grid gap-4 md:grid-cols-[1fr_1fr_auto]">
+              <div className="rounded-xl border border-black/8 bg-white px-5 py-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-ink/48">Plan</p>
+                <p className="mt-2 text-lg font-semibold text-ink">
+                  {premiumAccess.planName}
+                </p>
+                <p className="mt-1 text-sm text-ink/62">
+                  {fmtAmount(premiumAccess.priceAmount, premiumAccess.currency)} ·{" "}
+                  {premiumAccess.billingPeriod.toLowerCase()}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-black/8 bg-white px-5 py-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-ink/48">Wallet readiness</p>
+                <p className="mt-2 text-lg font-semibold text-ink">
+                  {effectiveWalletBalanceFormatted}
+                </p>
+                <p className="mt-1 text-sm text-ink/62">{premiumReadinessMessage}</p>
+                {effectiveShortfallAmount > 0 ? (
+                  <p className="mt-2 text-sm font-semibold text-copper">
+                    Add {fmtAmount(effectiveShortfallAmount, premiumAccess.currency)} more
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="flex flex-col justify-center gap-3 md:min-w-56">
+                {premiumAccess.premiumActive ? (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                    Premium active
+                  </div>
+                ) : (
+                  <button
+                    className="button-primary justify-center"
+                    disabled={!canPayPremiumFromWallet || premiumMutation.isPending}
+                    onClick={() => premiumMutation.mutate()}
+                    type="button"
+                  >
+                    {premiumMutation.isPending ? "Activating…" : `Pay ${premiumTitle}`}
+                  </button>
+                )}
+
+                {!premiumAccess.premiumActive && effectiveShortfallAmount > 0 ? (
+                  <button
+                    className="button-secondary justify-center"
+                    onClick={() => {
+                      setSelectedPreset(effectiveShortfallAmount);
+                      setCustomRupees("");
+                    }}
+                    type="button"
+                  >
+                    Prepare top-up
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
         </section>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_1.1fr]">

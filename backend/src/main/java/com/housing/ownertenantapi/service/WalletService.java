@@ -115,14 +115,17 @@ public class WalletService {
       return createStripeCheckout(identity, walletId, txnId, request, currency, description);
     }
 
-    // ── MOCK mode ──
+    // ── MOCK mode ── auto-credits the wallet immediately so the demo
+    // doesn't require Stripe. Tenants and owners both share this flow.
     OffsetDateTime now = nowUtc();
     jdbcClient.sql("""
         INSERT INTO wallet_transactions
           (txn_id, wallet_id, user_id, txn_type, amount, currency,
-           status, provider, provider_order_id, description, created_at)
+           status, provider, provider_order_id, provider_payment_id,
+           description, created_at, completed_at)
         VALUES (:txnId, :walletId, :userId, :txnType, :amount, :currency,
-                :status, :provider, :orderId, :description, :createdAt)
+                :status, :provider, :orderId, :paymentId,
+                :description, :createdAt, :completedAt)
         """)
         .param("txnId",       txnId)
         .param("walletId",    walletId)
@@ -130,11 +133,24 @@ public class WalletService {
         .param("txnType",     TXN_TOPUP)
         .param("amount",      (long) request.amount())   // stored in rupees
         .param("currency",    currency)
-        .param("status",      STATUS_PENDING)
+        .param("status",      STATUS_COMPLETED)
         .param("provider",    PROVIDER_MOCK)
         .param("orderId",     "mock_" + txnId)
+        .param("paymentId",   "mock_pi_" + txnId)
         .param("description", description)
         .param("createdAt",   now)
+        .param("completedAt", now)
+        .update();
+
+    // Credit wallet balance immediately for the demo flow.
+    jdbcClient.sql("""
+        UPDATE wallet_accounts
+        SET balance = balance + :amount, updated_at = :now
+        WHERE wallet_id = :walletId
+        """)
+        .param("amount",   (long) request.amount())
+        .param("now",      now)
+        .param("walletId", walletId)
         .update();
 
     return new WalletTopupCheckoutResponse(
@@ -314,17 +330,20 @@ public class WalletService {
         .orElseGet(() -> {
           String wid = "wallet_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
           OffsetDateTime now = nowUtc();
-          jdbcClient.sql("""
+          return jdbcClient.sql("""
               INSERT INTO wallet_accounts
                 (wallet_id, user_id, balance, currency, created_at, updated_at)
               VALUES (:wid, :userId, 0, :currency, :now, :now)
+              ON CONFLICT (user_id)
+              DO UPDATE SET currency = wallet_accounts.currency
+              RETURNING wallet_id
               """)
               .param("wid",      wid)
               .param("userId",   userId)
               .param("currency", DEFAULT_CURRENCY)
               .param("now",      now)
-              .update();
-          return wid;
+              .query(String.class)
+              .single();
         });
   }
 

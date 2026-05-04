@@ -1,5 +1,6 @@
 package com.housing.ownertenantapi.controller;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -17,11 +18,11 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest(properties = {
     "app.payments.provider=MOCK",
-    "app.premium.wallet-activation.enabled=true"
+    "app.premium.wallet-activation.enabled=false"
 })
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-class TenantPremiumControllerTest {
+class TenantPremiumLocalOnlyControllerTest {
 
   @Autowired
   private MockMvc mockMvc;
@@ -33,22 +34,7 @@ class TenantPremiumControllerTest {
   private JdbcTemplate jdbcTemplate;
 
   @Test
-  void shouldReturnPremiumStatusForStandardTenant() throws Exception {
-    String accessToken = login("divya.nair@example.com", "StrongPassword@123");
-
-    mockMvc.perform(get("/api/v1/subscriptions/tenant-premium")
-            .header("Authorization", "Bearer " + accessToken))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.planCode").value("TENANT_PREMIUM_ANNUAL"))
-        .andExpect(jsonPath("$.priceAmount").value(1000))
-        .andExpect(jsonPath("$.premiumActive").value(false))
-        .andExpect(jsonPath("$.walletBalance").value(650))
-        .andExpect(jsonPath("$.canActivate").value(false))
-        .andExpect(jsonPath("$.shortfallAmount").value(350));
-  }
-
-  @Test
-  void shouldActivatePremiumFromWalletBalance() throws Exception {
+  void shouldBlockWalletPremiumActivationWhenLocalFlagIsDisabled() throws Exception {
     jdbcTemplate.update("""
         UPDATE wallet_accounts
         SET balance = 1200
@@ -57,12 +43,18 @@ class TenantPremiumControllerTest {
 
     String accessToken = login("divya.nair@example.com", "StrongPassword@123");
 
-    mockMvc.perform(post("/api/v1/subscriptions/tenant-premium/activate")
+    mockMvc.perform(get("/api/v1/subscriptions/tenant-premium")
             .header("Authorization", "Bearer " + accessToken))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.premiumActive").value(true))
-        .andExpect(jsonPath("$.subscriptionStatus").value("ACTIVE"))
-        .andExpect(jsonPath("$.walletBalance").value(200));
+        .andExpect(jsonPath("$.premiumActive").value(false))
+        .andExpect(jsonPath("$.walletBalance").value(1200))
+        .andExpect(jsonPath("$.shortfallAmount").value(0))
+        .andExpect(jsonPath("$.canActivate").value(false))
+        .andExpect(jsonPath("$.message").value(containsString("local development")));
+
+    mockMvc.perform(post("/api/v1/subscriptions/tenant-premium/activate")
+            .header("Authorization", "Bearer " + accessToken))
+        .andExpect(status().isForbidden());
   }
 
   private String login(String identifier, String password) throws Exception {
