@@ -15,8 +15,7 @@ export default async function AccountOnboardingPage() {
         loginHref: "/account/login",
         logoutHref: "/account/logout",
         signupHref: "/account/register",
-        onboardingHref: "/account/onboarding",
-        gmailSignupHref: "/account/register/gmail"
+        onboardingHref: "/account/onboarding"
       }}
     />
   );

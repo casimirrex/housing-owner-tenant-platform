@@ -11,30 +11,30 @@ const pageOverrides: Record<
 > = {
   login: {
     eyebrow: "Account sign in",
-    title: "Sign in with email, phone, or Gmail",
+    title: "Sign in with email or phone",
     description:
-      "Use a cleaner sign-in page for your account. Gmail now has its own focused route, while email and phone stay here for quick access.",
+      "Use a cleaner sign-in page for your account. Email and phone are available for quick access.",
     pageType: "ACCOUNT",
-    ctaLabel: "Open Gmail login",
-    ctaHref: "/account/login/gmail",
+    ctaLabel: "Create a new account",
+    ctaHref: "/account/register",
     sections: [
       {
         heading: "Choose how you want to sign in",
         body:
-          "Start by deciding whether you want Gmail on its own page or a normal email or phone sign-in form here.",
+          "Start by deciding whether you want to sign in with email + password or with your phone number.",
         bullets: [
-          "Dedicated Gmail login page",
-          "Email or phone sign in",
+          "Email + password sign in",
+          "Phone OTP sign in",
           "One clear starting point"
         ]
       },
       {
         heading: "Complete the sign-in on this page",
         body:
-          "Use the form on the right to sign in with email or phone, or open the Gmail page if that is your preferred path.",
+          "Use the form on the right to sign in with your email and password.",
         bullets: [
           "Email or phone form",
-          "Dedicated Gmail button route",
+          "Password-based authentication",
           "Apple sign-in option"
         ]
       },
@@ -52,21 +52,21 @@ const pageOverrides: Record<
   },
   signup: {
     eyebrow: "Create account",
-    title: "Create your account with your own Gmail, email, or phone",
+    title: "Create your account with email or phone",
     description:
-      "Start registration on a simpler page that lets you use your own Gmail address, email address, or phone number without sample data getting in the way.",
+      "Start registration on a simple page that lets you use your email address or phone number to create an account.",
     pageType: "ACCOUNT",
-    ctaLabel: "Open Gmail registration",
-    ctaHref: "/account/register/gmail",
+    ctaLabel: "Open phone registration",
+    ctaHref: "/account/register",
     sections: [
       {
         heading: "Choose how you want to register",
         body:
-          "Start here first. Decide whether you want to type your Gmail address in the form, use Google on its own page, or register with a phone number.",
+          "Start here first. Decide whether you want to register with email + password or with your phone number.",
         bullets: [
-          "Type your own Gmail address",
-          "Dedicated Google registration route",
-          "Phone registration with OTP"
+          "Email + password registration",
+          "Phone OTP registration",
+          "Tenant or owner roles supported"
         ]
       },
       {
@@ -74,9 +74,9 @@ const pageOverrides: Record<
         body:
           "After choosing your method, use the registration area on the right to enter your own details and start the account.",
         bullets: [
-          "Enter your name and Gmail address",
+          "Enter your name and email address",
           "Or enter phone number",
-          "Or open the Google registration page"
+          "Set a strong password during onboarding"
         ]
       },
       {

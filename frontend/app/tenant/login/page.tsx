@@ -11,9 +11,9 @@ export default async function TenantLoginPage() {
     eyebrow: "Tenant sign in",
     title: "Sign in to continue your renter journey",
     description:
-      "Use the renter sign-in path for discovery, saved homes, onboarding, visits, wallet, and payments. Gmail and OTP stay on this renter-friendly side.",
-    ctaLabel: "Open Gmail login",
-    ctaHref: "/account/login/gmail"
+      "Use the renter sign-in path for discovery, saved homes, onboarding, visits, wallet, and payments. Email and phone OTP are supported.",
+    ctaLabel: "Create a tenant account",
+    ctaHref: "/tenant/register"
   };
 
   return (
@@ -25,7 +25,6 @@ export default async function TenantLoginPage() {
         logoutHref: "/account/logout",
         signupHref: "/account/register",
         onboardingHref: "/account/onboarding",
-        gmailLoginHref: "/account/login/gmail",
         ownerLoginHref: "/owner/login",
         ownerSetupHref: "/list-your-home",
         roleIntent: "TENANT",

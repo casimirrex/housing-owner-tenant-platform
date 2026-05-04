@@ -16,7 +16,7 @@ type RegistrationChoice = "gmail-address" | "google" | "phone";
 
 const emailRegistrationSchema = z.object({
   fullName: z.string().min(2, "Enter your full name"),
-  email: z.string().email("Enter a valid Gmail or email address")
+  email: z.string().email("Enter a valid email address")
 });
 
 const phoneRegistrationSchema = z.object({
@@ -52,14 +52,16 @@ const choiceCards: Array<{
 }> = [
   {
     key: "gmail-address",
-    title: "Use your Gmail address",
-    detail: "Type your own Gmail address directly on this page and start registration."
+    title: "Use your email address",
+    detail: "Type your email address directly on this page and start registration."
   },
-  {
-    key: "google",
-    title: "Continue with Google",
-    detail: "Open the secure Google page and choose the Gmail account you want to use."
-  },
+  ...(GOOGLE_AUTH_ENABLED
+    ? [{
+        key: "google" as RegistrationChoice,
+        title: "Continue with Google",
+        detail: "Open the secure Google page and choose the Gmail account you want to use."
+      }]
+    : []),
   {
     key: "phone",
     title: "Use your phone number",

@@ -27,9 +27,9 @@ type RoleIntent = "OWNER" | "TENANT";
 
 const authScopeItems = [
   {
-    title: "Google Sign-In / Gmail Login",
+    title: "Email + password sign-in",
     status: "Included",
-    detail: "Explicitly supported in the PRD alongside phone and email registration."
+    detail: "Primary sign-in method, supported alongside phone OTP."
   },
   {
     title: "Logout / Session Sign-Out",
@@ -173,7 +173,7 @@ export function AuthExperience({
   const primaryButtonLabel = isOwnerIntent ? "Sign in to owner dashboard" : "Login with email / phone";
   const sessionEmptyLabel = isOwnerIntent
     ? "No active owner session yet. Use the owner account you created from the property setup flow."
-    : "No active session yet. Use email, phone, or Gmail to sign in, then manage refresh and sign-out here.";
+    : "No active session yet. Use email or phone to sign in, then manage refresh and sign-out here.";
   const bottomPrimaryHref = isOwnerIntent ? ownerSetupHref : signupHref;
   const bottomPrimaryLabel = isOwnerIntent ? "Create owner account" : "Open registration page";
   const bottomSecondaryHref = isOwnerIntent ? tenantLoginHref : ownerLoginHref;
@@ -311,7 +311,7 @@ export function AuthExperience({
                 </p>
                 <p className="mt-3 text-sm leading-6 text-ink/72">
                   Owners sign in with the password-backed account created from the owner setup flow.
-                  Gmail and OTP are kept on the renter path so listing management stays predictable.
+                  Email and phone OTP are available on the renter path so listing management stays predictable.
                 </p>
               </div>
             )}
@@ -402,7 +402,7 @@ export function AuthExperience({
             {isOwnerIntent ? "Owner clarity" : "Fast entry"}
           </p>
           <p className="mt-3 text-lg font-semibold text-ink">
-            {isOwnerIntent ? "Owner account, owner dashboard" : "Gmail in one click"}
+            {isOwnerIntent ? "Owner account, owner dashboard" : "Email + password in one click"}
           </p>
           <p className="mt-3 text-sm leading-6 text-ink/72">
             {isOwnerIntent

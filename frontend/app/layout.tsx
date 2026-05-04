@@ -5,7 +5,7 @@ import { Providers } from "@/app/providers";
 import "@/app/globals.css";
 
 export const metadata: Metadata = {
-  title: "Rent and Beyond",
+  title: "RentMate",
   description: "Trust-first property discovery, city landing pages, map search, and detailed rental journeys."
 };
 

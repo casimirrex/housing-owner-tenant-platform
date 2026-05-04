@@ -212,11 +212,11 @@ export function SiteChrome({ children }: { children: ReactNode }) {
           <div className="flex flex-wrap items-center justify-between gap-5">
             <Link className="group flex items-center gap-3.5" href="/">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-navy text-xs font-bold uppercase tracking-[0.28em] text-oat">
-                RB
+                RM
               </div>
               <div>
                 <p className="font-serif text-[1.65rem] font-semibold leading-none tracking-[-0.01em] text-navy">
-                  Rent and Beyond
+                  RentMate
                 </p>
                 <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.36em] text-ink/46">
                   Trust-first rentals
@@ -264,7 +264,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy text-[10px] font-bold uppercase tracking-widest text-oat">
                     RB
                   </div>
-                  <p className="font-serif text-xl font-semibold text-navy">Rent and Beyond</p>
+                  <p className="font-serif text-xl font-semibold text-navy">RentMate</p>
                 </div>
                 <p className="mt-5 max-w-md font-serif text-2xl leading-snug text-ink md:text-[1.75rem]">
                   Trusted rentals for owners and tenants in one product.
@@ -307,7 +307,6 @@ export function SiteChrome({ children }: { children: ReactNode }) {
                   {[
                     { href: "/account/login", label: "Sign in" },
                     { href: "/account/register", label: "Registration" },
-                    { href: "/account/register/gmail", label: "Gmail registration" },
                     { href: "/contact", label: "Contact support" },
                     { href: "/privacy-policy", label: "Privacy policy" },
                   ].map((link) => (
@@ -321,7 +320,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
 
             <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-black/6 pt-5">
               <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-ink/42">
-                © {new Date().getFullYear()} Rent and Beyond · All rights reserved
+                © {new Date().getFullYear()} RentMate · All rights reserved
               </p>
               <p className="text-[11px] text-ink/46">
                 Bengaluru · Pune · Hyderabad · Chennai · NCR-Delhi

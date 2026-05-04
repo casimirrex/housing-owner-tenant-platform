@@ -174,12 +174,12 @@ export function TenantRegistrationExperience() {
               {(
                 [
                   {
-                    key: "email",
+                    key: "email" as const,
                     title: "Email + name",
                     detail: "Quickest path. Use your work or personal email."
                   },
                   {
-                    key: "phone",
+                    key: "phone" as const,
                     title: "Phone number",
                     detail: "OTP-based. Useful if you prefer SMS verification."
                   },
@@ -190,7 +190,7 @@ export function TenantRegistrationExperience() {
                         detail: "One click via your Gmail account."
                       }]
                     : [])
-                ] as const
+                ]
               ).map((m) => (
                 <button
                   className={`rounded-[28px] border p-4 text-left transition ${

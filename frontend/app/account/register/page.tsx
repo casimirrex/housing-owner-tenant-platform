@@ -16,7 +16,6 @@ export default async function AccountRegisterPage() {
         logoutHref: "/account/logout",
         signupHref: "/account/register",
         onboardingHref: "/account/onboarding",
-        gmailSignupHref: "/account/register/gmail",
         ownerLoginHref: "/owner/login",
         ownerSetupHref: "/list-your-home",
         tenantLoginHref: "/tenant/login"
