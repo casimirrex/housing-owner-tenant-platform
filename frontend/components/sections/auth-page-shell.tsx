@@ -102,7 +102,7 @@ export function AuthPageShell({
             <h1 className="mt-6 max-w-4xl font-serif text-4xl leading-tight text-oat md:text-6xl">
               {page.title}
             </h1>
-            <p className="mt-5 max-w-2xl text-base leading-8 text-oat/78 md:text-lg">
+            <p className="mt-5 max-w-2xl text-base leading-8 text-white md:text-lg">
               {page.description}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
