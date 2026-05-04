@@ -13,6 +13,7 @@ import {
   loginWithGoogle
 } from "@/lib/api/client";
 import { GoogleIdentityButton } from "@/components/ui/google-identity-button";
+import { GOOGLE_AUTH_ENABLED } from "@/lib/feature-flags";
 import { useAuthStore } from "@/store/auth-store";
 
 /**
@@ -181,11 +182,13 @@ export function OwnerRegistrationExperience() {
                     title: "Phone number",
                     detail: "OTP-based verification."
                   },
-                  {
-                    key: "google",
-                    title: "Continue with Google",
-                    detail: "One click via your Gmail account."
-                  }
+                  ...(GOOGLE_AUTH_ENABLED
+                    ? [{
+                        key: "google" as const,
+                        title: "Continue with Google",
+                        detail: "One click via your Gmail account."
+                      }]
+                    : [])
                 ] as const
               ).map((m) => (
                 <button
@@ -360,7 +363,7 @@ export function OwnerRegistrationExperience() {
             </form>
           ) : null}
 
-          {method === "google" ? (
+          {GOOGLE_AUTH_ENABLED && method === "google" ? (
             <div className="mt-6 grid gap-5">
               <p className="text-sm leading-6 text-ink/72">
                 One-tap signup using your Google account. If your Google email

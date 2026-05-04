@@ -23,6 +23,7 @@ import {
   updateCurrentUserProfile,
   updateUserPreferences
 } from "@/lib/api/client";
+import { GOOGLE_AUTH_ENABLED } from "@/lib/feature-flags";
 import { useAuthStore } from "@/store/auth-store";
 
 type SetupStep = "profile" | "preferences" | "security";
@@ -424,13 +425,15 @@ export function SignupExperience({
               Already registered? Sign in and continue your setup from where you left off.
             </p>
           </Link>
-          <Link className="section-panel flex flex-col gap-3" href={googleHref ?? "/account/register/gmail"}>
-            <Sparkles className="h-6 w-6 text-pine" />
-            <p className="text-lg font-semibold text-ink">Continue with Gmail</p>
-            <p className="text-sm leading-6 text-ink/72">
-              Use the dedicated Gmail route if you want Google to confirm your account first.
-            </p>
-          </Link>
+          {GOOGLE_AUTH_ENABLED ? (
+            <Link className="section-panel flex flex-col gap-3" href={googleHref ?? "/account/register/gmail"}>
+              <Sparkles className="h-6 w-6 text-pine" />
+              <p className="text-lg font-semibold text-ink">Continue with Gmail</p>
+              <p className="text-sm leading-6 text-ink/72">
+                Use the dedicated Gmail route if you want Google to confirm your account first.
+              </p>
+            </Link>
+          ) : null}
         </div>
       </section>
     );

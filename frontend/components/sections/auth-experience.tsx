@@ -14,6 +14,7 @@ import {
   refreshSession
 } from "@/lib/api/client";
 import { GoogleIdentityButton } from "@/components/ui/google-identity-button";
+import { GOOGLE_AUTH_ENABLED } from "@/lib/feature-flags";
 import { useAuthStore } from "@/store/auth-store";
 
 const loginSchema = z.object({
@@ -275,7 +276,7 @@ export function AuthExperience({
               ) : null}
             </div>
 
-            {!isOwnerIntent ? (
+            {GOOGLE_AUTH_ENABLED && !isOwnerIntent ? (
               <div className="soft-panel">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-copper">
                   Gmail verification

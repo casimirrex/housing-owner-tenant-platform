@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { registerWithEmail, registerWithPhone } from "@/lib/api/client";
+import { GOOGLE_AUTH_ENABLED } from "@/lib/feature-flags";
 import { useAuthStore } from "@/store/auth-store";
 
 type AccountPath = "TENANT" | "OWNER";
@@ -479,7 +480,7 @@ export function RegistrationExperience({
                 the address into the register form.
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
-                {googleHref ? (
+                {GOOGLE_AUTH_ENABLED && googleHref ? (
                   <Link className="button-primary" href={googleHref}>
                     Open secure Gmail registration
                   </Link>

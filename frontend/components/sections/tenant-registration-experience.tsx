@@ -10,6 +10,7 @@ import { z } from "zod";
 import { registerWithEmail, registerWithPhone } from "@/lib/api/client";
 import { GoogleIdentityButton } from "@/components/ui/google-identity-button";
 import { loginWithGoogle } from "@/lib/api/client";
+import { GOOGLE_AUTH_ENABLED } from "@/lib/feature-flags";
 import { useAuthStore } from "@/store/auth-store";
 
 /**
@@ -182,11 +183,13 @@ export function TenantRegistrationExperience() {
                     title: "Phone number",
                     detail: "OTP-based. Useful if you prefer SMS verification."
                   },
-                  {
-                    key: "google",
-                    title: "Continue with Google",
-                    detail: "One click via your Gmail account."
-                  }
+                  ...(GOOGLE_AUTH_ENABLED
+                    ? [{
+                        key: "google" as const,
+                        title: "Continue with Google",
+                        detail: "One click via your Gmail account."
+                      }]
+                    : [])
                 ] as const
               ).map((m) => (
                 <button
@@ -361,7 +364,7 @@ export function TenantRegistrationExperience() {
             </form>
           ) : null}
 
-          {method === "google" ? (
+          {GOOGLE_AUTH_ENABLED && method === "google" ? (
             <div className="mt-6 grid gap-5">
               <p className="text-sm leading-6 text-ink/72">
                 One-tap signup using your Google account. We mark the resulting

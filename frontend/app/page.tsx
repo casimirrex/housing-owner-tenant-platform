@@ -35,9 +35,6 @@ export default async function HomePage() {
               <Link className="button-secondary border-white/20 bg-white/10 text-oat hover:bg-white hover:text-pine" href="/account/register">
                 Registration
               </Link>
-              <Link className="button-secondary border-white/20 bg-white/10 text-oat hover:bg-white hover:text-pine" href="/account/register/gmail">
-                Gmail registration
-              </Link>
               <Link className="button-secondary border-white/20 bg-white/10 text-oat hover:bg-white hover:text-pine" href="/list-your-home">
                 List your home
               </Link>
