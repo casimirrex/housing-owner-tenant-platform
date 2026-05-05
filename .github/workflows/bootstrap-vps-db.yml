@@ -1,0 +1,77 @@
+name: Bootstrap VPS Database
+
+on:
+  workflow_dispatch:
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create schema and seed data if VPS database is empty
+        env:
+          VPS_SSH_HOST: ${{ secrets.VPS_SSH_HOST }}
+          VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT }}
+          VPS_SSH_USER: ${{ secrets.VPS_SSH_USER }}
+          VPS_SSH_PASSWORD: ${{ secrets.VPS_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          : "${VPS_SSH_HOST:?Missing VPS_SSH_HOST secret}"
+          : "${VPS_SSH_USER:?Missing VPS_SSH_USER secret}"
+          : "${VPS_SSH_PASSWORD:?Missing VPS_SSH_PASSWORD secret}"
+
+          VPS_SSH_PORT="${VPS_SSH_PORT:-22}"
+
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+
+          export SSHPASS="$VPS_SSH_PASSWORD"
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          ssh-keyscan -p "$VPS_SSH_PORT" -H "$VPS_SSH_HOST" >> "$HOME/.ssh/known_hosts"
+
+          sshpass -e scp -P "$VPS_SSH_PORT" \
+            backend/src/main/resources/schema.sql \
+            backend/src/main/resources/data.sql \
+            "$VPS_SSH_USER@$VPS_SSH_HOST:/tmp/"
+
+          sshpass -e ssh -p "$VPS_SSH_PORT" "$VPS_SSH_USER@$VPS_SSH_HOST" 'bash -s' <<'REMOTE_SCRIPT'
+          set -eu
+
+          SUDO=""
+          if [ "$(id -u)" -ne 0 ]; then
+            SUDO=sudo
+          fi
+
+          table_count="$($SUDO docker exec -i housing-postgres psql -U housing housing_owner_tenant -Atc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';")"
+          users_table="$($SUDO docker exec -i housing-postgres psql -U housing housing_owner_tenant -Atc "SELECT COALESCE(to_regclass('public.users')::text, '');")"
+
+          echo "Existing public table count: $table_count"
+          echo "users table: ${users_table:-missing}"
+
+          if [ "$table_count" != "0" ] && [ -z "$users_table" ]; then
+            echo "Refusing to bootstrap: database is not empty, but users table is missing."
+            echo "Manual inspection is required to avoid damaging existing data."
+            exit 1
+          fi
+
+          if [ -n "$users_table" ]; then
+            echo "users table already exists. Skipping bootstrap."
+          else
+            echo "Database is empty. Applying baseline schema and seed data."
+            $SUDO docker exec -i housing-postgres psql -U housing housing_owner_tenant -v ON_ERROR_STOP=1 < /tmp/schema.sql
+            $SUDO docker exec -i housing-postgres psql -U housing housing_owner_tenant -v ON_ERROR_STOP=1 < /tmp/data.sql
+          fi
+
+          echo "Verification:"
+          $SUDO docker exec -i housing-postgres psql -U housing housing_owner_tenant -v ON_ERROR_STOP=1 <<'SQL'
+          SELECT to_regclass('public.users') AS users_table;
+          SELECT to_regclass('public.listings') AS listings_table;
+          SELECT COUNT(*) AS users_count FROM users;
+          SELECT COUNT(*) AS listings_count FROM listings;
+          SELECT COUNT(*) AS subscription_plans_count FROM subscription_plans;
+          SQL
+          REMOTE_SCRIPT
