@@ -134,8 +134,16 @@ jobs:
             if [ -n "$port_conflict_containers" ]; then
               $SUDO docker stop $port_conflict_containers || true
             fi
+            $SUDO docker rm -f housing-caddy || true
           fi
 
           $SUDO docker compose -f docker-compose.prod.yml up -d --build
           $SUDO docker compose -f docker-compose.prod.yml ps
+          $SUDO docker ps --filter "name=housing" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          $SUDO docker inspect housing-caddy --format 'housing-caddy published ports: {{json .NetworkSettings.Ports}}' || true
+          $SUDO ss -ltnp | grep -E ':(80|443|3000|8080)[[:space:]]' || true
+          $SUDO curl -I --max-time 10 http://127.0.0.1 || true
+          $SUDO curl -kI --max-time 10 --resolve testition.tech:443:127.0.0.1 https://testition.tech || true
+          $SUDO curl -kI --max-time 10 --resolve api.testition.tech:443:127.0.0.1 https://api.testition.tech/swagger || true
+          $SUDO docker logs --tail 80 housing-caddy || true
           REMOTE_SCRIPT
