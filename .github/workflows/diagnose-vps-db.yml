@@ -44,7 +44,7 @@ jobs:
 
           echo
           echo "== Database table check =="
-          $SUDO docker exec housing-postgres psql -U housing housing_owner_tenant -v ON_ERROR_STOP=1 <<'SQL'
+          $SUDO docker exec -i housing-postgres psql -U housing housing_owner_tenant -v ON_ERROR_STOP=1 <<'SQL'
           SELECT current_database() AS database_name, current_user AS db_user;
           SELECT to_regclass('public.users') AS users_table;
           SELECT to_regclass('public.auth_flows') AS auth_flows_table;
