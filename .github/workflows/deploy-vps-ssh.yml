@@ -69,7 +69,7 @@ jobs:
           NODE_ENV=production
           FRONTEND_DOMAIN=testition.tech
           BACKEND_DOMAIN=api.testition.tech
-          GOOGLE_OAUTH_ALLOWED_REDIRECT_URIS=https://frontend.${HOSTINGER_VPS_IP}.nip.io/account/login/gmail,https://frontend.${HOSTINGER_VPS_IP}.nip.io/account/register/gmail,https://frontend.${HOSTINGER_VPS_IP}.nip.io/rest/oauth2-credential/callback
+          GOOGLE_OAUTH_ALLOWED_REDIRECT_URIS=https://testition.tech/account/login/gmail,https://testition.tech/account/register/gmail,https://testition.tech/rest/oauth2-credential/callback
           DB_PASSWORD=${DB_PASSWORD}
           GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
           GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}

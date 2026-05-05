@@ -19,9 +19,9 @@ jobs:
           docker-compose-path: docker-compose.prod.yml
           environment-variables: |
             NODE_ENV=production
-            FRONTEND_DOMAIN=frontend.${{ secrets.HOSTINGER_VPS_IP }}.nip.io
-            BACKEND_DOMAIN=backend.${{ secrets.HOSTINGER_VPS_IP }}.nip.io
-            GOOGLE_OAUTH_ALLOWED_REDIRECT_URIS=https://frontend.${{ secrets.HOSTINGER_VPS_IP }}.nip.io/account/login/gmail,https://frontend.${{ secrets.HOSTINGER_VPS_IP }}.nip.io/account/register/gmail,https://frontend.${{ secrets.HOSTINGER_VPS_IP }}.nip.io/rest/oauth2-credential/callback
+            FRONTEND_DOMAIN=testition.tech
+            BACKEND_DOMAIN=api.testition.tech
+            GOOGLE_OAUTH_ALLOWED_REDIRECT_URIS=https://testition.tech/account/login/gmail,https://testition.tech/account/register/gmail,https://testition.tech/rest/oauth2-credential/callback
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
             GOOGLE_OAUTH_CLIENT_SECRET=${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
