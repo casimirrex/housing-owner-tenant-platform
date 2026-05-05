@@ -118,6 +118,24 @@ jobs:
             $SUDO ufw allow 443/tcp || true
           fi
 
+          # The bundled Caddy container owns public HTTP/HTTPS for this app.
+          # Free common host-level reverse proxies that can block ports 80/443.
+          if command -v systemctl >/dev/null 2>&1; then
+            for service in nginx apache2 caddy; do
+              if $SUDO systemctl list-unit-files "$service.service" >/dev/null 2>&1; then
+                $SUDO systemctl stop "$service" || true
+                $SUDO systemctl disable "$service" || true
+              fi
+            done
+          fi
+
+          if command -v docker >/dev/null 2>&1; then
+            port_conflict_containers="$($SUDO docker ps --format '{{.ID}} {{.Names}} {{.Ports}}' | awk '$0 ~ /0\.0\.0\.0:80->|0\.0\.0\.0:443->|\[::\]:80->|\[::\]:443->/ && $0 !~ /housing-caddy/ {print $1}')"
+            if [ -n "$port_conflict_containers" ]; then
+              $SUDO docker stop $port_conflict_containers || true
+            fi
+          fi
+
           $SUDO docker compose -f docker-compose.prod.yml up -d --build
           $SUDO docker compose -f docker-compose.prod.yml ps
           REMOTE_SCRIPT
