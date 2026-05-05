@@ -137,7 +137,7 @@ jobs:
             $SUDO docker rm -f housing-caddy || true
           fi
 
-          $SUDO docker compose -f docker-compose.prod.yml up -d postgres redis
+          $SUDO docker compose -f docker-compose.prod.yml up -d postgres redis < /dev/null
           for attempt in $(seq 1 30); do
             if $SUDO docker exec housing-postgres pg_isready -U housing -d housing_owner_tenant >/dev/null 2>&1; then
               break
@@ -145,7 +145,7 @@ jobs:
             sleep 2
           done
 
-          table_count="$($SUDO docker exec -i housing-postgres psql -U housing housing_owner_tenant -Atc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';")"
+          table_count="$($SUDO docker exec housing-postgres psql -U housing housing_owner_tenant -Atc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';")"
           echo "Existing public table count: $table_count"
           if [ "$table_count" = "0" ]; then
             echo "Production database is empty. Applying baseline schema and seed data."
@@ -155,7 +155,7 @@ jobs:
             echo "Production database already has tables. Skipping baseline bootstrap."
           fi
 
-          $SUDO docker compose -f docker-compose.prod.yml up -d --build
+          $SUDO docker compose -f docker-compose.prod.yml up -d --build < /dev/null
           $SUDO docker compose -f docker-compose.prod.yml ps
           $SUDO docker ps --filter "name=housing" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
           $SUDO docker inspect housing-caddy --format 'housing-caddy published ports: {{json .NetworkSettings.Ports}}' || true

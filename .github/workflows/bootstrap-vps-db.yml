@@ -46,8 +46,8 @@ jobs:
             SUDO=sudo
           fi
 
-          table_count="$($SUDO docker exec -i housing-postgres psql -U housing housing_owner_tenant -Atc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';")"
-          users_table="$($SUDO docker exec -i housing-postgres psql -U housing housing_owner_tenant -Atc "SELECT COALESCE(to_regclass('public.users')::text, '');")"
+          table_count="$($SUDO docker exec housing-postgres psql -U housing housing_owner_tenant -Atc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';")"
+          users_table="$($SUDO docker exec housing-postgres psql -U housing housing_owner_tenant -Atc "SELECT COALESCE(to_regclass('public.users')::text, '');")"
 
           echo "Existing public table count: $table_count"
           echo "users table: ${users_table:-missing}"
