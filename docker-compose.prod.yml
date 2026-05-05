@@ -48,6 +48,10 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      # Production: never re-run schema.sql / data.sql on backend startup.
+      # That file DROPs all tables — running it on prod would wipe real user data.
+      # Schema changes on prod are applied manually via vps-migrations/*.sql.
+      SQL_INIT_MODE: never
       CORS_ALLOWED_ORIGINS: https://${FRONTEND_DOMAIN}
       GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID}
       GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET}

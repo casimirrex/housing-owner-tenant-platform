@@ -212,14 +212,14 @@ export function SiteChrome({ children }: { children: ReactNode }) {
           <div className="flex flex-wrap items-center justify-between gap-5">
             <Link className="group flex items-center gap-3.5" href="/">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-navy text-xs font-bold uppercase tracking-[0.28em] text-oat">
-                TN
+                RB
               </div>
               <div>
                 <p className="font-serif text-[1.65rem] font-semibold leading-none tracking-[-0.01em] text-navy">
-                  Testition
+                  Rent and Beyond
                 </p>
                 <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.36em] text-ink/46">
-                  Trust-first rentals
+                  Trust-first rental only
                 </p>
               </div>
             </Link>

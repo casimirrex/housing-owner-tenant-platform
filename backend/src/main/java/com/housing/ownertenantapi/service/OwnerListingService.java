@@ -1,5 +1,6 @@
 package com.housing.ownertenantapi.service;
 
+import com.housing.ownertenantapi.dto.EntitlementResult;
 import com.housing.ownertenantapi.dto.OwnerCreatePaymentRecordRequest;
 import com.housing.ownertenantapi.dto.OwnerCreatePaymentRecordResponse;
 import com.housing.ownertenantapi.dto.OwnerListingCreateRequest;
@@ -18,6 +19,7 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -26,15 +28,18 @@ public class OwnerListingService {
   private final JdbcTemplate jdbcTemplate;
   private final CurrentSessionService currentSessionService;
   private final TenantPremiumService premiumService;
+  private final EntitlementService entitlementService;
 
   public OwnerListingService(
       JdbcTemplate jdbcTemplate,
       CurrentSessionService currentSessionService,
-      TenantPremiumService premiumService
+      TenantPremiumService premiumService,
+      EntitlementService entitlementService
   ) {
     this.jdbcTemplate = jdbcTemplate;
     this.currentSessionService = currentSessionService;
     this.premiumService = premiumService;
+    this.entitlementService = entitlementService;
   }
 
   public OwnerListingCreateResponse createListing(
@@ -45,14 +50,26 @@ public class OwnerListingService {
     return createListingForOwnerUserId(ownerSession.userId(), request);
   }
 
+  @Transactional
   public OwnerListingCreateResponse createListingForOwnerUserId(
       String ownerUserId,
       OwnerListingCreateRequest request
   ) {
-    boolean ownerPremiumActive = premiumService.hasActiveOwnerPremium(ownerUserId);
-    String listingStatus = ownerPremiumActive ? "PUBLISHED" : "DRAFT";
     long sequenceValue = jdbcTemplate.queryForObject("SELECT nextval('owner_listing_seq')", Long.class);
     String listingId = "owner_listing_" + sequenceValue;
+
+    // Free-trial gate: premium owners get unlimited posts; free-tier owners get N
+    // (configured in feature_entitlements). tryConsume records usage atomically;
+    // if the listing insert below fails, the whole transaction rolls back.
+    EntitlementResult entitlement = entitlementService.tryConsume(
+        ownerUserId, EntitlementService.Feature.OWNER_LISTING_POST, listingId);
+    if (!entitlement.allowed()) {
+      throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, entitlement.message());
+    }
+
+    boolean ownerPremiumActive = "PREMIUM".equals(entitlement.tier());
+    // Both premium and free-trial publish — free trial is "use the app like a paying user".
+    String listingStatus = "PUBLISHED";
     OffsetDateTime createdAt = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.SECONDS);
     OwnerIdentity ownerIdentity = fetchCurrentOwner(ownerUserId);
     String canonicalCity = CityCatalog.canonicalize(request.city());

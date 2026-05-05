@@ -534,3 +534,11 @@ INSERT INTO wallet_transactions (
   ('wtxn_seed_divya_001', 'wallet_seed_divya', 'user_7n6m5l4k', 'TOPUP', 650, 'INR', 'COMPLETED', 'SEEDED',
    'seed_order_divya_001', 'seed_payment_divya_001', NULL, 'Initial wallet balance for standard tenant upgrade testing.',
    TIMESTAMPTZ '2026-04-05T08:00:00Z', TIMESTAMPTZ '2026-04-05T08:00:00Z');
+
+-- Free-trial limits. Adjust limit values via SQL UPDATE; no redeploy needed.
+INSERT INTO feature_entitlements (feature_key, plan_tier, free_limit, description) VALUES
+  ('OWNER_LISTING_POST',   'FREE',    3,    'Owner can publish 3 listings on free tier'),
+  ('OWNER_LISTING_POST',   'PREMIUM', NULL, 'Owner premium: unlimited listings'),
+  ('TENANT_PROPERTY_VIEW', 'FREE',    3,    'Tenant can view full details of 3 unique properties on free tier'),
+  ('TENANT_PROPERTY_VIEW', 'PREMIUM', NULL, 'Tenant premium: unlimited property views')
+ON CONFLICT (feature_key, plan_tier) DO NOTHING;

@@ -67,8 +67,8 @@ jobs:
           umask 077
           cat > deploy.env <<EOF
           NODE_ENV=production
-          FRONTEND_DOMAIN=frontend.${HOSTINGER_VPS_IP}.nip.io
-          BACKEND_DOMAIN=backend.${HOSTINGER_VPS_IP}.nip.io
+          FRONTEND_DOMAIN=testition.tech
+          BACKEND_DOMAIN=api.testition.tech
           GOOGLE_OAUTH_ALLOWED_REDIRECT_URIS=https://frontend.${HOSTINGER_VPS_IP}.nip.io/account/login/gmail,https://frontend.${HOSTINGER_VPS_IP}.nip.io/account/register/gmail,https://frontend.${HOSTINGER_VPS_IP}.nip.io/rest/oauth2-credential/callback
           DB_PASSWORD=${DB_PASSWORD}
           GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}

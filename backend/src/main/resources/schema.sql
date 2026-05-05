@@ -7,6 +7,8 @@ DROP TABLE IF EXISTS leases CASCADE;
 DROP TABLE IF EXISTS auth_sessions CASCADE;
 DROP TABLE IF EXISTS auth_flows CASCADE;
 DROP TABLE IF EXISTS auth_identities CASCADE;
+DROP TABLE IF EXISTS feature_usage_events CASCADE;
+DROP TABLE IF EXISTS feature_entitlements CASCADE;
 DROP TABLE IF EXISTS user_subscriptions CASCADE;
 DROP TABLE IF EXISTS subscription_plans CASCADE;
 DROP TABLE IF EXISTS wallet_transactions CASCADE;
@@ -214,6 +216,38 @@ CREATE TABLE user_subscriptions (
 
 CREATE INDEX idx_user_subscriptions_user_status
   ON user_subscriptions(user_id, status, expires_at DESC);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Free-trial entitlement system
+--   feature_entitlements   = config (per-feature, per-tier limit)
+--   feature_usage_events   = ledger (one row per consumed entitlement)
+-- Premium status is NOT duplicated here — derived from user_subscriptions.
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE feature_entitlements (
+  feature_key   VARCHAR(64)  NOT NULL,
+  plan_tier     VARCHAR(32)  NOT NULL,
+  free_limit    INTEGER,                 -- NULL = unlimited (PREMIUM)
+  description   TEXT,
+  created_at    TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (feature_key, plan_tier),
+  CONSTRAINT chk_fe_plan_tier  CHECK (plan_tier IN ('FREE','PREMIUM')),
+  CONSTRAINT chk_fe_free_limit CHECK (free_limit IS NULL OR free_limit >= 0)
+);
+
+CREATE TABLE feature_usage_events (
+  user_id      VARCHAR(64)  NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  feature_key  VARCHAR(64)  NOT NULL,
+  resource_id  VARCHAR(64)  NOT NULL,
+  occurred_at  TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, feature_key, resource_id)
+);
+
+CREATE INDEX idx_feature_usage_user_feature
+  ON feature_usage_events (user_id, feature_key, occurred_at DESC);
+
+CREATE INDEX idx_feature_usage_recent
+  ON feature_usage_events (feature_key, occurred_at DESC);
 
 CREATE TABLE user_preferences (
   user_id VARCHAR(64) PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,

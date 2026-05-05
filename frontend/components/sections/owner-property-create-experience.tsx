@@ -326,6 +326,12 @@ export function OwnerPropertyCreateExperience() {
                       </Link>
                     ) : null}
                   </div>
+                ) : listingMsg.text.toLowerCase().includes("free trial used up") ? (
+                  <div className="mt-3 flex flex-wrap gap-3">
+                    <Link className="button-primary" href="/wallet">
+                      Activate Owner Premium
+                    </Link>
+                  </div>
                 ) : null}
               </div>
               <button

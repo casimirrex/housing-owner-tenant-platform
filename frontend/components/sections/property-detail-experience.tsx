@@ -65,6 +65,12 @@ export function PropertyDetailExperience({
   ];
   const fullAccess = detail.viewerAccess.accessLevel === "FULL";
   const premiumRequired = detail.viewerAccess.premiumRequired;
+  // Free-trial active = tenant gets FULL access without an active premium subscription.
+  // Backend grants this for the first N unique property views (configured in feature_entitlements).
+  const isFreeTrialActive =
+    fullAccess &&
+    detail.viewerAccess.viewerRole === "TENANT" &&
+    !detail.viewerAccess.premiumActive;
 
   const premiumQuery = useQuery({
     queryKey: ["tenant-premium", accessToken ?? "guest"],
@@ -122,6 +128,20 @@ export function PropertyDetailExperience({
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-12 md:py-14">
+      {isFreeTrialActive ? (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3">
+          <div className="flex items-start gap-3">
+            <Crown className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+            <p className="text-sm text-amber-900">
+              <strong>{detail.viewerAccess.headline}</strong>
+              <span className="ml-2 text-amber-800/80">{detail.viewerAccess.message}</span>
+            </p>
+          </div>
+          <Link className="button-primary text-xs" href="/wallet">
+            Activate Premium
+          </Link>
+        </div>
+      ) : null}
       <section className="grid gap-8 lg:grid-cols-[1.18fr_0.82fr]">
         <div className="hero-panel px-6 py-8 md:px-10 md:py-10">
           <div className="relative z-10">

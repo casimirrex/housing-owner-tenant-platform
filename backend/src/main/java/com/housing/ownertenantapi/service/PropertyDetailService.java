@@ -1,5 +1,6 @@
 package com.housing.ownertenantapi.service;
 
+import com.housing.ownertenantapi.dto.EntitlementResult;
 import com.housing.ownertenantapi.dto.PropertyCoreResponse;
 import com.housing.ownertenantapi.dto.PropertyCtaFlagsResponse;
 import com.housing.ownertenantapi.dto.PropertyDetailResponse;
@@ -37,15 +38,18 @@ public class PropertyDetailService {
   private final JdbcTemplate jdbcTemplate;
   private final CurrentSessionService currentSessionService;
   private final TenantPremiumService tenantPremiumService;
+  private final EntitlementService entitlementService;
 
   public PropertyDetailService(
       JdbcTemplate jdbcTemplate,
       CurrentSessionService currentSessionService,
-      TenantPremiumService tenantPremiumService
+      TenantPremiumService tenantPremiumService,
+      EntitlementService entitlementService
   ) {
     this.jdbcTemplate = jdbcTemplate;
     this.currentSessionService = currentSessionService;
     this.tenantPremiumService = tenantPremiumService;
+    this.entitlementService = entitlementService;
   }
 
   /**
@@ -56,8 +60,40 @@ public class PropertyDetailService {
    */
   public PropertyDetailResponse getPropertyDetail(String propertyId, String authorizationHeader) {
     PropertyRecord property = getPropertyRecord(propertyId);
+    Optional<CurrentSessionService.SessionIdentity> session =
+        currentSessionService.findSession(authorizationHeader);
     PropertyViewerAccessResponse viewerAccess =
-        tenantPremiumService.resolvePropertyViewerAccess(currentSessionService.findSession(authorizationHeader));
+        tenantPremiumService.resolvePropertyViewerAccess(session);
+
+    // Free-trial gate: tenants without premium get up to N free unique property views
+    // (configured in feature_entitlements). Re-viewing the same property is idempotent
+    // — the composite PK on feature_usage_events makes the second insert a no-op.
+    if ("TEASER".equals(viewerAccess.accessLevel())
+        && "TENANT".equals(viewerAccess.viewerRole())
+        && session.isPresent()) {
+      EntitlementResult entitlement = entitlementService.tryConsume(
+          session.get().userId(),
+          EntitlementService.Feature.TENANT_PROPERTY_VIEW,
+          propertyId);
+      if (entitlement.allowed()) {
+        viewerAccess = new PropertyViewerAccessResponse(
+            "FULL",
+            viewerAccess.viewerRole(),
+            viewerAccess.premiumRequired(),
+            viewerAccess.premiumActive(),
+            viewerAccess.ownerView(),
+            "Free trial — full property unlocked",
+            entitlement.message(),
+            viewerAccess.upgradePlanCode(),
+            viewerAccess.upgradePlanName(),
+            viewerAccess.upgradePrice(),
+            viewerAccess.upgradeCurrency(),
+            viewerAccess.upgradePeriodLabel()
+        );
+      }
+      // entitlement.allowed == false → keep TEASER + existing upgrade messaging
+    }
+
     boolean fullAccess = "FULL".equalsIgnoreCase(viewerAccess.accessLevel());
     String ownerResponseTimeLabel = buildOwnerResponseTimeLabel(property.ownerResponseRate());
     List<String> photos = fetchPhotos(propertyId);

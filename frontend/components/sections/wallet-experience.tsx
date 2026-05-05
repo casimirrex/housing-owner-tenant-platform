@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useCallback, useMemo, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -514,6 +515,7 @@ function TxnBadge({ status }: { status: string }) {
 
 /* ─── Main wallet experience ──────────────────────────────────────────────── */
 export function WalletExperience() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { session } = useAuthStore();
   const accessToken = session?.accessToken;
@@ -634,6 +636,11 @@ export function WalletExperience() {
       setApiError(null);
       setSuccessMsg(res.message);
       await refreshWalletAndPremiumState();
+      if (accountRole === "TENANT") {
+        router.push("/search");
+      } else if (accountRole === "OWNER") {
+        router.push("/owner/listings/new");
+      }
     },
     onError: (err) => {
       setApiError(
