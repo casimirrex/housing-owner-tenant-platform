@@ -1,0 +1,68 @@
+name: Diagnose VPS Database
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Inspect VPS database and backend logs
+        env:
+          VPS_SSH_HOST: ${{ secrets.VPS_SSH_HOST }}
+          VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT }}
+          VPS_SSH_USER: ${{ secrets.VPS_SSH_USER }}
+          VPS_SSH_PASSWORD: ${{ secrets.VPS_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          : "${VPS_SSH_HOST:?Missing VPS_SSH_HOST secret}"
+          : "${VPS_SSH_USER:?Missing VPS_SSH_USER secret}"
+          : "${VPS_SSH_PASSWORD:?Missing VPS_SSH_PASSWORD secret}"
+
+          VPS_SSH_PORT="${VPS_SSH_PORT:-22}"
+
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+
+          export SSHPASS="$VPS_SSH_PASSWORD"
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          ssh-keyscan -p "$VPS_SSH_PORT" -H "$VPS_SSH_HOST" >> "$HOME/.ssh/known_hosts"
+
+          sshpass -e ssh -p "$VPS_SSH_PORT" "$VPS_SSH_USER@$VPS_SSH_HOST" 'bash -s' <<'REMOTE_SCRIPT'
+          set -eu
+
+          SUDO=""
+          if [ "$(id -u)" -ne 0 ]; then
+            SUDO=sudo
+          fi
+
+          echo "== Containers =="
+          $SUDO docker ps --filter "name=housing" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || true
+
+          echo
+          echo "== Database table check =="
+          $SUDO docker exec housing-postgres psql -U housing housing_owner_tenant -v ON_ERROR_STOP=1 <<'SQL'
+          SELECT current_database() AS database_name, current_user AS db_user;
+          SELECT to_regclass('public.users') AS users_table;
+          SELECT to_regclass('public.auth_flows') AS auth_flows_table;
+          SELECT to_regclass('public.auth_sessions') AS auth_sessions_table;
+          SELECT to_regclass('public.subscription_plans') AS subscription_plans_table;
+          SELECT COUNT(*) AS table_count
+          FROM information_schema.tables
+          WHERE table_schema = 'public'
+            AND table_type = 'BASE TABLE';
+          SELECT table_name
+          FROM information_schema.tables
+          WHERE table_schema = 'public'
+            AND table_type = 'BASE TABLE'
+          ORDER BY table_name
+          LIMIT 80;
+          SQL
+
+          echo
+          echo "== Backend recent errors =="
+          $SUDO docker logs --tail 160 housing-backend || true
+          REMOTE_SCRIPT
