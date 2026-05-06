@@ -63,6 +63,10 @@ function fmtDate(val: string | null) {
   }
 }
 
+function isDebitTransaction(txnType: string) {
+  return ["DEBIT", "PAYMENT", "PREMIUM_SUBSCRIPTION"].includes(txnType.toUpperCase());
+}
+
 /* Preset top-up amounts in INR rupees */
 const PRESET_AMOUNTS_INR = [500, 1000, 2000, 5000];
 
@@ -576,17 +580,11 @@ export function WalletExperience() {
     premiumAccess && !premiumAccess.premiumActive
       ? Math.max(0, premiumAccess.priceAmount - effectiveWalletBalance)
       : 0;
-  const walletActivationUnavailable =
-    premiumAccess?.message.toLowerCase().includes("only in local development") ?? false;
   const canPayPremiumFromWallet =
     Boolean(premiumAccess) &&
     !premiumAccess?.premiumActive &&
-    !walletActivationUnavailable &&
-    (premiumAccess?.canActivate === true || effectiveShortfallAmount === 0);
-  const premiumReadinessMessage =
-    premiumAccess && canPayPremiumFromWallet && !premiumAccess.canActivate
-      ? `Your wallet balance is ready. You can activate ${premiumTitle} immediately.`
-      : premiumAccess?.message;
+    premiumAccess?.canActivate === true;
+  const premiumReadinessMessage = premiumAccess?.message;
 
   /* Resolved amount in rupees */
   const resolvedAmount = useMemo<number | null>(() => {
@@ -1027,32 +1025,39 @@ export function WalletExperience() {
                   </div>
                 )}
 
-              {data?.transactions?.map((txn) => (
-                <div
-                  key={txn.txnId}
-                  className="rounded-2xl border border-black/8 bg-white p-5 shadow-soft"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-ink">
-                        {txn.description}
-                      </p>
-                      <p className="mt-1 text-xs text-ink/58">{fmtDate(txn.createdAt)}</p>
+              {data?.transactions?.map((txn) => {
+                const isDebit = isDebitTransaction(txn.txnType);
+                return (
+                  <div
+                    key={txn.txnId}
+                    className="rounded-2xl border border-black/8 bg-white p-5 shadow-soft"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-ink">
+                          {txn.description}
+                        </p>
+                        <p className="mt-1 text-xs text-ink/58">{fmtDate(txn.createdAt)}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5">
+                        <p className={[
+                          "whitespace-nowrap text-sm font-bold",
+                          isDebit ? "text-copper" : "text-navy"
+                        ].join(" ")}>
+                          {isDebit ? "- " : "+ "}
+                          {fmtAmount(txn.amount, txn.currency)}
+                        </p>
+                        <TxnBadge status={txn.status} />
+                      </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1.5">
-                      <p className="whitespace-nowrap text-sm font-bold text-navy">
-                        + {fmtAmount(txn.amount, txn.currency)}
+                    {txn.completedAt && txn.status === "COMPLETED" && (
+                      <p className="mt-2 text-xs text-ink/46">
+                        {isDebit ? "Deducted" : "Credited"}: {fmtDate(txn.completedAt)}
                       </p>
-                      <TxnBadge status={txn.status} />
-                    </div>
+                    )}
                   </div>
-                  {txn.completedAt && txn.status === "COMPLETED" && (
-                    <p className="mt-2 text-xs text-ink/46">
-                      Credited: {fmtDate(txn.completedAt)}
-                    </p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
 

@@ -51,6 +51,7 @@ DB_USER=your_db_user
 DB_PASSWORD=your_db_password
 CORS_ALLOWED_ORIGINS=https://testition.tech
 PAYMENT_PROVIDER=STRIPE
+PREMIUM_WALLET_ACTIVATION_ENABLED=true
 STRIPE_SECRET_KEY=sk_live_or_test_key
 STRIPE_PUBLISHABLE_KEY=pk_live_or_test_key
 STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret

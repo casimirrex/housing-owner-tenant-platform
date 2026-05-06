@@ -385,8 +385,10 @@ export function OwnerPropertyCreateExperience() {
                     <p className="mt-1 text-sm text-copper">
                       Add {formatCurrency(ownerPremium.shortfallAmount)} more before publishing.
                     </p>
-                  ) : (
+                  ) : ownerPremium.canActivate ? (
                     <p className="mt-1 text-sm text-ink/62">Wallet is ready for Owner Premium.</p>
+                  ) : (
+                    <p className="mt-1 text-sm text-ink/62">{ownerPremium.message}</p>
                   )}
                 </div>
                 <div className="flex flex-col justify-center gap-3">

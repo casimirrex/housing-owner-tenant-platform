@@ -50,7 +50,7 @@ class TenantPremiumLocalOnlyControllerTest {
         .andExpect(jsonPath("$.walletBalance").value(1200))
         .andExpect(jsonPath("$.shortfallAmount").value(0))
         .andExpect(jsonPath("$.canActivate").value(false))
-        .andExpect(jsonPath("$.message").value(containsString("local development")));
+        .andExpect(jsonPath("$.message").value(containsString("not enabled")));
 
     mockMvc.perform(post("/api/v1/subscriptions/tenant-premium/activate")
             .header("Authorization", "Bearer " + accessToken))

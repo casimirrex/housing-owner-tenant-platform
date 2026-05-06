@@ -105,7 +105,8 @@ export function PropertyDetailExperience({
     sessionRole === "TENANT" &&
     !hasUnlockedAccess &&
     !premiumSummary?.premiumActive &&
-    !premiumSummary?.canActivate;
+    !premiumSummary?.canActivate &&
+    (premiumSummary?.shortfallAmount ?? 0) > 0;
 
   useEffect(() => {
     if (

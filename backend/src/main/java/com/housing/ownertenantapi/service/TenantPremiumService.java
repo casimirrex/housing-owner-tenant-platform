@@ -139,7 +139,7 @@ public class TenantPremiumService {
     if (premiumActive) {
       message = "Premium access is already active for your tenant account.";
     } else if (!premiumWalletActivationEnabled) {
-      message = "Wallet-based premium activation is available only in local development.";
+      message = "Wallet-based Tenant Premium activation is not enabled for this environment.";
     } else if (canActivate) {
       message = "Your wallet balance is ready. You can activate premium immediately.";
     } else {
@@ -193,10 +193,25 @@ public class TenantPremiumService {
       );
     }
 
-    requireLocalWalletActivationEnabled();
+    requireWalletActivationEnabled();
 
-    String walletId = getOrCreateWalletId(identity.userId());
-    long walletBalance = getWalletBalance(walletId);
+    WalletRecord wallet = getOrCreateLockedWallet(identity.userId());
+    Optional<SubscriptionRecord> subscriptionAfterWalletLock = findActiveSubscription(identity.userId(), now);
+    if (subscriptionAfterWalletLock.isPresent()) {
+      SubscriptionRecord subscription = subscriptionAfterWalletLock.get();
+      return new TenantPremiumActivationResponse(
+          true,
+          subscription.subscriptionId(),
+          subscription.planCode(),
+          subscription.status(),
+          formatTimestamp(subscription.startedAt()),
+          formatTimestamp(subscription.expiresAt()),
+          wallet.balance(),
+          "Premium access is already active for this tenant account."
+      );
+    }
+
+    long walletBalance = wallet.balance();
     if (walletBalance < plan.priceAmount()) {
       long shortfall = plan.priceAmount() - walletBalance;
       throw new ResponseStatusException(
@@ -208,6 +223,7 @@ public class TenantPremiumService {
     String walletTxnId = "wtxn_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
     String subscriptionId = "sub_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
     OffsetDateTime expiresAt = now.plusDays(plan.validityDays());
+    long updatedBalance = deductWalletBalance(wallet.walletId(), plan.priceAmount(), now);
 
     jdbcClient.sql("""
         INSERT INTO wallet_transactions
@@ -218,7 +234,7 @@ public class TenantPremiumService {
            :orderId, :paymentId, NULL, :description, :createdAt, :completedAt)
         """)
         .param("txnId", walletTxnId)
-        .param("walletId", walletId)
+        .param("walletId", wallet.walletId())
         .param("userId", identity.userId())
         .param("txnType", WALLET_TXN_PREMIUM_SUBSCRIPTION)
         .param("amount", plan.priceAmount())
@@ -230,17 +246,6 @@ public class TenantPremiumService {
         .param("description", "Tenant Premium annual activation")
         .param("createdAt", now)
         .param("completedAt", now)
-        .update();
-
-    jdbcClient.sql("""
-        UPDATE wallet_accounts
-        SET balance = balance - :amount,
-            updated_at = :updatedAt
-        WHERE wallet_id = :walletId
-        """)
-        .param("amount", plan.priceAmount())
-        .param("updatedAt", now)
-        .param("walletId", walletId)
         .update();
 
     jdbcClient.sql("""
@@ -265,7 +270,6 @@ public class TenantPremiumService {
         .param("updatedAt", now)
         .update();
 
-    long updatedBalance = getWalletBalance(walletId);
     return new TenantPremiumActivationResponse(
         true,
         subscriptionId,
@@ -382,7 +386,7 @@ public class TenantPremiumService {
     if (premiumActive) {
       message = "Owner Premium is active. You can publish listings.";
     } else if (!premiumWalletActivationEnabled) {
-      message = "Wallet-based Owner Premium activation is available only in local development.";
+      message = "Wallet-based Owner Premium activation is not enabled for this environment.";
     } else if (canActivate) {
       message = "Your wallet balance is ready. You can activate Owner Premium immediately.";
     } else {
@@ -438,10 +442,26 @@ public class TenantPremiumService {
       );
     }
 
-    requireLocalWalletActivationEnabled();
+    requireWalletActivationEnabled();
 
-    String walletId = getOrCreateWalletId(identity.userId());
-    long walletBalance = getWalletBalance(walletId);
+    WalletRecord wallet = getOrCreateLockedWallet(identity.userId());
+    Optional<SubscriptionRecord> subscriptionAfterWalletLock =
+        findActiveSubscriptionForPlan(identity.userId(), PLAN_CODE_OWNER_PREMIUM_ANNUAL, now);
+    if (subscriptionAfterWalletLock.isPresent()) {
+      SubscriptionRecord subscription = subscriptionAfterWalletLock.get();
+      return new TenantPremiumActivationResponse(
+          true,
+          subscription.subscriptionId(),
+          subscription.planCode(),
+          subscription.status(),
+          formatTimestamp(subscription.startedAt()),
+          formatTimestamp(subscription.expiresAt()),
+          wallet.balance(),
+          "Owner Premium is already active for this account."
+      );
+    }
+
+    long walletBalance = wallet.balance();
     if (walletBalance < plan.priceAmount()) {
       long shortfall = plan.priceAmount() - walletBalance;
       throw new ResponseStatusException(
@@ -453,6 +473,7 @@ public class TenantPremiumService {
     String walletTxnId = "wtxn_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
     String subscriptionId = "sub_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
     OffsetDateTime expiresAt = now.plusDays(plan.validityDays());
+    long updatedBalance = deductWalletBalance(wallet.walletId(), plan.priceAmount(), now);
 
     jdbcClient.sql("""
         INSERT INTO wallet_transactions
@@ -463,7 +484,7 @@ public class TenantPremiumService {
            :orderId, :paymentId, NULL, :description, :createdAt, :completedAt)
         """)
         .param("txnId", walletTxnId)
-        .param("walletId", walletId)
+        .param("walletId", wallet.walletId())
         .param("userId", identity.userId())
         .param("txnType", WALLET_TXN_PREMIUM_SUBSCRIPTION)
         .param("amount", plan.priceAmount())
@@ -475,17 +496,6 @@ public class TenantPremiumService {
         .param("description", "Owner Premium annual activation")
         .param("createdAt", now)
         .param("completedAt", now)
-        .update();
-
-    jdbcClient.sql("""
-        UPDATE wallet_accounts
-        SET balance = balance - :amount,
-            updated_at = :updatedAt
-        WHERE wallet_id = :walletId
-        """)
-        .param("amount", plan.priceAmount())
-        .param("updatedAt", now)
-        .param("walletId", walletId)
         .update();
 
     jdbcClient.sql("""
@@ -510,7 +520,6 @@ public class TenantPremiumService {
         .param("updatedAt", now)
         .update();
 
-    long updatedBalance = getWalletBalance(walletId);
     return new TenantPremiumActivationResponse(
         true,
         subscriptionId,
@@ -570,11 +579,57 @@ public class TenantPremiumService {
         .orElse(0L);
   }
 
-  private void requireLocalWalletActivationEnabled() {
+  private WalletRecord getOrCreateLockedWallet(String userId) {
+    String walletId = "wallet_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+    OffsetDateTime now = nowUtc();
+    return jdbcClient.sql("""
+        INSERT INTO wallet_accounts
+          (wallet_id, user_id, balance, currency, created_at, updated_at)
+        VALUES
+          (:walletId, :userId, 0, 'INR', :createdAt, :updatedAt)
+        ON CONFLICT (user_id)
+        DO UPDATE SET currency = wallet_accounts.currency
+        RETURNING wallet_id, balance
+        """)
+        .param("walletId", walletId)
+        .param("userId", userId)
+        .param("createdAt", now)
+        .param("updatedAt", now)
+        .query((rs, rowNum) -> new WalletRecord(
+            rs.getString("wallet_id"),
+            rs.getLong("balance")
+        ))
+        .single();
+  }
+
+  private long deductWalletBalance(String walletId, long amount, OffsetDateTime updatedAt) {
+    int updatedRows = jdbcClient.sql("""
+        UPDATE wallet_accounts
+        SET balance = balance - :amount,
+            updated_at = :updatedAt
+        WHERE wallet_id = :walletId
+          AND balance >= :amount
+        """)
+        .param("amount", amount)
+        .param("updatedAt", updatedAt)
+        .param("walletId", walletId)
+        .update();
+
+    if (updatedRows != 1) {
+      throw new ResponseStatusException(
+          HttpStatus.PAYMENT_REQUIRED,
+          "Wallet balance changed while activating premium. Please refresh your wallet and try again."
+      );
+    }
+
+    return getWalletBalance(walletId);
+  }
+
+  private void requireWalletActivationEnabled() {
     if (!premiumWalletActivationEnabled) {
       throw new ResponseStatusException(
           HttpStatus.FORBIDDEN,
-          "Wallet-based premium activation is available only in local development."
+          "Wallet-based premium activation is not enabled for this environment."
       );
     }
   }
@@ -620,6 +675,12 @@ public class TenantPremiumService {
       String status,
       OffsetDateTime startedAt,
       OffsetDateTime expiresAt
+  ) {
+  }
+
+  private record WalletRecord(
+      String walletId,
+      long balance
   ) {
   }
 }

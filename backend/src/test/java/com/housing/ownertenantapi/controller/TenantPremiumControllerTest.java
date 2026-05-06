@@ -65,6 +65,55 @@ class TenantPremiumControllerTest {
         .andExpect(jsonPath("$.walletBalance").value(200));
   }
 
+  @Test
+  void shouldEnableTenantPremiumAfterWalletTopupFlow() throws Exception {
+    String accessToken = login("divya.nair@example.com", "StrongPassword@123");
+
+    String checkoutResponse = mockMvc.perform(post("/api/v1/wallet/topup/checkout")
+            .header("Authorization", "Bearer " + accessToken)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "amount": 350,
+                  "currency": "INR"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.providerMode").value("MOCK"))
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
+
+    String txnId = objectMapper.readTree(checkoutResponse).path("txnId").asText();
+
+    mockMvc.perform(post("/api/v1/wallet/topup/verify")
+            .header("Authorization", "Bearer " + accessToken)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "txnId": "%s",
+                  "paymentIntentId": "mock_pi_%s"
+                }
+                """.formatted(txnId, txnId)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.newBalance").value(1000));
+
+    mockMvc.perform(get("/api/v1/subscriptions/tenant-premium")
+            .header("Authorization", "Bearer " + accessToken))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.walletBalance").value(1000))
+        .andExpect(jsonPath("$.shortfallAmount").value(0))
+        .andExpect(jsonPath("$.canActivate").value(true));
+
+    mockMvc.perform(post("/api/v1/subscriptions/tenant-premium/activate")
+            .header("Authorization", "Bearer " + accessToken))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.premiumActive").value(true))
+        .andExpect(jsonPath("$.planCode").value("TENANT_PREMIUM_ANNUAL"))
+        .andExpect(jsonPath("$.subscriptionStatus").value("ACTIVE"))
+        .andExpect(jsonPath("$.walletBalance").value(0));
+  }
+
   private String login(String identifier, String password) throws Exception {
     String response = mockMvc.perform(post("/auth/login")
             .contentType(MediaType.APPLICATION_JSON)
