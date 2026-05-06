@@ -150,9 +150,14 @@ export function RegistrationExperience({
     }
   });
 
+  const googleRedirectUri =
+    typeof window === "undefined"
+      ? "http://127.0.0.1:3001/account/register"
+      : `${window.location.origin}/account/register`;
+
   const googleMutation = useMutation({
     mutationFn: (identityToken: string) =>
-      loginWithGoogle({ identityToken, role: accountPath }),
+      loginWithGoogle({ identityToken, redirectUri: googleRedirectUri, role: accountPath }),
     onSuccess: (response) => {
       setSession(response);
       setPageError(null);
