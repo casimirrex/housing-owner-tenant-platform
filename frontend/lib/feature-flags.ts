@@ -3,4 +3,4 @@
 // home hero CTA, owner + tenant registration). Email + phone registration
 // still work normally. Re-enable by setting this back to true once the
 // Google OAuth client config is finalised.
-export const GOOGLE_AUTH_ENABLED = false;
+export const GOOGLE_AUTH_ENABLED = true;
