@@ -7,7 +7,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { registerWithEmail, registerWithPhone } from "@/lib/api/client";
+import { registerWithEmail, registerWithPhone, loginWithGoogle } from "@/lib/api/client";
+import { GoogleIdentityButton } from "@/components/ui/google-identity-button";
 import { GOOGLE_AUTH_ENABLED } from "@/lib/feature-flags";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -146,6 +147,21 @@ export function RegistrationExperience({
     },
     onError: (error) => {
       setPageError(error instanceof Error ? error.message : "Registration failed. Please try again.");
+    }
+  });
+
+  const googleMutation = useMutation({
+    mutationFn: (identityToken: string) =>
+      loginWithGoogle({ identityToken, role: accountPath }),
+    onSuccess: (response) => {
+      setSession(response);
+      setPageError(null);
+      setPageNotice("Signed in with Google. Taking you to account setup.");
+      setStatusMessage("Signed in with Google. Taking you to account setup.");
+      router.push(onboardingHref);
+    },
+    onError: (error) => {
+      setPageError(error instanceof Error ? error.message : "Google sign-in failed.");
     }
   });
 
@@ -497,15 +513,22 @@ export function RegistrationExperience({
 
             <div className="soft-panel">
               <p className="text-sm leading-6 text-ink/74">
-                Use this when you want Google to verify your Gmail account for you instead of typing
-                the address into the register form.
+                Click the Google button below to choose a Gmail account. We will create your tenant
+                profile from your verified Google details — no separate password needed.
               </p>
+              {GOOGLE_AUTH_ENABLED ? (
+                <div className="mt-4">
+                  <GoogleIdentityButton
+                    onCredential={(token) => googleMutation.mutate(token)}
+                    onError={(message) => setPageError(message)}
+                    text="signup_with"
+                  />
+                  {googleMutation.isPending ? (
+                    <p className="mt-3 text-sm text-pine">Verifying your Google account...</p>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="mt-4 flex flex-wrap gap-3">
-                {GOOGLE_AUTH_ENABLED && googleHref ? (
-                  <Link className="button-primary" href={googleHref}>
-                    Open secure Gmail registration
-                  </Link>
-                ) : null}
                 <Link className="button-secondary" href={onboardingHref}>
                   Continue to account setup
                 </Link>

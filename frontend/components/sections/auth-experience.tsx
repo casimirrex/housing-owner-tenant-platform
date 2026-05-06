@@ -283,23 +283,11 @@ export function AuthExperience({
                   Gmail verification
                 </p>
                 <div className="mt-3">
-                  {googleHref ? (
-                    <div className="grid gap-3">
-                      <p className="text-sm leading-6 text-ink/72">
-                        Gmail sign-in now has its own page so the Google step can stay clean and
-                        easy to follow.
-                      </p>
-                      <Link className="button-primary" href={googleHref}>
-                        Open Gmail login page
-                      </Link>
-                    </div>
-                  ) : (
-                    <GoogleIdentityButton
-                      onCredential={(identityToken) => googleMutation.mutate(identityToken)}
-                      onError={(message) => setStatusMessage(message)}
-                      text="continue_with"
-                    />
-                  )}
+                  <GoogleIdentityButton
+                    onCredential={(identityToken) => googleMutation.mutate(identityToken)}
+                    onError={(message) => setStatusMessage(message)}
+                    text="continue_with"
+                  />
                 </div>
                 {googleMutation.isPending ? (
                   <p className="mt-3 text-sm text-pine">Verifying your Google account...</p>
