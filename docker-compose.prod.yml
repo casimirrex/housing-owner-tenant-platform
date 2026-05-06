@@ -52,7 +52,7 @@ services:
       # That file DROPs all tables — running it on prod would wipe real user data.
       # Schema changes on prod are applied manually via vps-migrations/*.sql.
       SQL_INIT_MODE: never
-      CORS_ALLOWED_ORIGINS: https://${FRONTEND_DOMAIN}
+      CORS_ALLOWED_ORIGINS: https://${FRONTEND_DOMAIN},https://www.${FRONTEND_DOMAIN}
       GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID}
       GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET}
       GOOGLE_OAUTH_ALLOWED_CLIENT_IDS: ${GOOGLE_OAUTH_ALLOWED_CLIENT_IDS}
