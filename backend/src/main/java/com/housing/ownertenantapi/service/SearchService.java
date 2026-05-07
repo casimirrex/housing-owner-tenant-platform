@@ -68,6 +68,7 @@ public class SearchService {
 
     List<ListingSummaryResponse> items = jdbcTemplate.query("""
             SELECT listing_id, title, locality, city, rent, bhk, verified, premium,
+                   (featured_until IS NOT NULL AND featured_until > now()) AS featured,
                    posted_label, urgency_label
             """
             + searchBundle.fromClause()
@@ -82,6 +83,7 @@ public class SearchService {
             rs.getString("bhk"),
             rs.getBoolean("verified"),
             rs.getBoolean("premium"),
+            rs.getBoolean("featured"),
             rs.getString("posted_label"),
             rs.getString("urgency_label")
         ),
@@ -258,6 +260,7 @@ public class SearchService {
 
     List<ListingSummaryResponse> items = jdbcTemplate.query("""
             SELECT listing_id, title, locality, city, rent, bhk, verified, premium,
+                   (featured_until IS NOT NULL AND featured_until > now()) AS featured,
                    posted_label, urgency_label,
                    SQRT(POWER(lat - ?, 2) + POWER(lng - ?, 2)) * 111 AS distance_km
             FROM listings
@@ -274,6 +277,7 @@ public class SearchService {
             rs.getString("bhk"),
             rs.getBoolean("verified"),
             rs.getBoolean("premium"),
+            rs.getBoolean("featured"),
             rs.getString("posted_label"),
             rs.getString("urgency_label")
         ),
@@ -385,11 +389,15 @@ public class SearchService {
   }
 
   private String resolveSortClause(String sortBy) {
+    // Featured Listings: any listing whose featured_until is still in the future
+    // sorts above non-featured listings, regardless of the chosen sortBy.
+    // Within each group (featured / not), the user-selected sort applies.
+    String featuredFirst = "(featured_until IS NOT NULL AND featured_until > now()) DESC";
     return switch (sortBy.toLowerCase(Locale.ROOT)) {
-      case "rentasc" -> "rent ASC";
-      case "rentdesc" -> "rent DESC";
-      case "newest" -> "created_at DESC";
-      default -> "verified DESC, premium DESC, rent ASC";
+      case "rentasc"  -> featuredFirst + ", rent ASC";
+      case "rentdesc" -> featuredFirst + ", rent DESC";
+      case "newest"   -> featuredFirst + ", created_at DESC";
+      default         -> featuredFirst + ", verified DESC, premium DESC, rent ASC";
     };
   }
 

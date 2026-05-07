@@ -7,8 +7,20 @@ export interface ListingSummary {
   bhk: string;
   verified: boolean;
   premium: boolean;
+  /** Currently being paid-promoted to top of search (Bug F2: Featured Listings) */
+  featured?: boolean;
   postedLabel: string;
   urgencyLabel?: string | null;
+}
+
+export interface ListingPromotionResponse {
+  listingId: string;
+  featuredUntil: string;
+  durationDays: number;
+  amountPaid: number;
+  currency: string;
+  walletBalance: number;
+  message: string;
 }
 
 export interface RecommendationItem {

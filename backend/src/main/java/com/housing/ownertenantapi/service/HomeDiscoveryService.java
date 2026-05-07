@@ -225,9 +225,28 @@ public class HomeDiscoveryService {
         rs.getString("bhk"),
         rs.getBoolean("verified"),
         rs.getBoolean("premium"),
+        // Defensive: the column might not be present in every SQL — default to false.
+        hasColumn(rs, "featured") && rs.getBoolean("featured"),
         rs.getString("posted_label"),
         rs.getString("urgency_label")
     ), args);
+  }
+
+  /**
+   * Helper: check whether a given column name exists in the result-set metadata.
+   * Lets queryListingSummaries handle SQL queries that may or may not project the
+   * featured column, without modifying every call site at once.
+   */
+  private static boolean hasColumn(java.sql.ResultSet rs, String columnName) {
+    try {
+      java.sql.ResultSetMetaData meta = rs.getMetaData();
+      for (int i = 1; i <= meta.getColumnCount(); i++) {
+        if (columnName.equalsIgnoreCase(meta.getColumnLabel(i))) return true;
+      }
+    } catch (java.sql.SQLException ignored) {
+      // fall through to false
+    }
+    return false;
   }
 
   private PaginationResponse buildPagination(long totalItems, int page, int pageSize) {

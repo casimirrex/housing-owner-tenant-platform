@@ -29,6 +29,7 @@ import type {
   UserAccountDeactivationResponse,
   UserPhotoUploadResponse,
   UserPasswordUpdateResponse,
+  ListingPromotionResponse,
   OwnerAnalyticsResponse,
   UserPreferenceProfileResponse,
   UserPreferenceUpdateResponse,
@@ -736,6 +737,25 @@ export function getOwnerAnalytics(accessToken?: string) {
   return fetchJson<OwnerAnalyticsResponse>(
     "/api/v1/owners/analytics",
     undefined,
+    {},
+    accessToken
+  );
+}
+
+/* ── Featured Listings (paid promotion) ───────────────────────────────── */
+
+export function promoteListing(
+  listingId: string,
+  durationDays: 7 | 30,
+  accessToken?: string
+) {
+  return fetchJson<ListingPromotionResponse>(
+    `/api/v1/owners/listings/${encodeURIComponent(listingId)}/promote`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ durationDays })
+    },
     {},
     accessToken
   );

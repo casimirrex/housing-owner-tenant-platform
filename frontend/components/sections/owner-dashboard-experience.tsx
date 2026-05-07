@@ -17,6 +17,8 @@ import {
 } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth-store";
 import { OwnerAnalyticsPanel } from "@/components/sections/owner-analytics-panel";
+import { PromoteListingModal } from "@/components/ui/promote-listing-modal";
+import { Rocket } from "lucide-react";
 
 const paymentRecordSchema = z.object({
   tenantEmail:  z.string().email("Enter a valid tenant email"),
@@ -44,6 +46,9 @@ export function OwnerDashboardExperience() {
   const accessToken = session?.accessToken;
 
   const [paymentMsg, setPaymentMsg]     = useState<{ type: "success" | "error"; text: string } | null>(null);
+  // Featured Listings — modal state
+  const [promotingListing, setPromotingListing] = useState<{ id: string; title: string } | null>(null);
+  const [promoteMsg, setPromoteMsg] = useState<string | null>(null);
 
   const paymentForm = useForm<PaymentRecordValues>({
     resolver: zodResolver(paymentRecordSchema),
@@ -480,6 +485,19 @@ export function OwnerDashboardExperience() {
                     </span>
                     <span>Available from {listing.availabilityDate}</span>
                   </div>
+                  {/* Featured Listings — Promote CTA only for PUBLISHED listings */}
+                  {listing.status === "PUBLISHED" ? (
+                    <div className="mt-4 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setPromotingListing({ id: listing.listingId, title: listing.title })}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+                      >
+                        <Rocket className="h-3.5 w-3.5" />
+                        Promote this listing
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ))
             ) : (
@@ -627,6 +645,42 @@ export function OwnerDashboardExperience() {
           </div>
         </form>
       </section>
+
+      {/* Featured Listings — promote modal */}
+      {promotingListing ? (
+        <PromoteListingModal
+          listingId={promotingListing.id}
+          listingTitle={promotingListing.title}
+          isFeatured={false}
+          onClose={() => setPromotingListing(null)}
+          onPromoted={(result) => {
+            setPromotingListing(null);
+            setPromoteMsg(
+              `✅ Listing promoted until ${new Date(result.featuredUntil).toLocaleDateString("en-IN")}. ` +
+              `Wallet balance: Rs ${result.walletBalance.toLocaleString("en-IN")}.`
+            );
+            // Refresh listings + analytics so any UI counts update.
+            queryClient.invalidateQueries({ queryKey: ["owner-listings", accessToken ?? "guest"] });
+            queryClient.invalidateQueries({ queryKey: ["owner-analytics", accessToken ?? "guest"] });
+            queryClient.invalidateQueries({ queryKey: ["wallet-dashboard", accessToken ?? "guest"] });
+          }}
+        />
+      ) : null}
+
+      {/* Featured Listings — toast banner shown after a successful promote */}
+      {promoteMsg ? (
+        <div className="fixed bottom-6 right-6 z-40 max-w-sm rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-900 shadow-soft">
+          <p className="font-semibold">Promoted!</p>
+          <p className="mt-1 text-emerald-800/80">{promoteMsg}</p>
+          <button
+            type="button"
+            onClick={() => setPromoteMsg(null)}
+            className="mt-3 text-xs font-semibold text-emerald-700 hover:text-emerald-900"
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
     </main>
   );
 }

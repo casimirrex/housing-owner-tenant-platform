@@ -341,6 +341,10 @@ CREATE TABLE listings (
   lng DOUBLE PRECISION NOT NULL,
   verified BOOLEAN NOT NULL DEFAULT FALSE,
   premium BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Featured Listings: when set in the future, the listing rises to the top of
+  -- search results until this timestamp. NULL = not featured. Owners pay from
+  -- their wallet via POST /api/v1/owners/listings/{id}/promote.
+  featured_until TIMESTAMPTZ,
   pet_friendly BOOLEAN NOT NULL DEFAULT FALSE,
   tenant_type TEXT,
   posted_label TEXT,
@@ -514,6 +518,10 @@ CREATE INDEX idx_listings_status ON listings(status);
 CREATE INDEX idx_listings_owner ON listings(owner_id, owner_managed);
 CREATE INDEX idx_listings_geo ON listings(city, lat, lng);
 CREATE INDEX idx_listings_search ON listings(city, rent, bhk, furnishing, tenant_type, verified);
+-- Featured Listings: partial index — only rows currently being boosted are
+-- in the index. Search ORDER BY featured_until DESC NULLS LAST scans this
+-- tiny index first, then falls through to created_at ordering for the rest.
+CREATE INDEX idx_listings_featured ON listings(featured_until DESC) WHERE featured_until IS NOT NULL;
 CREATE INDEX idx_listing_amenities_listing ON listing_amenities(listing_id);
 CREATE INDEX idx_listing_photos_listing ON listing_photos(listing_id);
 CREATE INDEX idx_property_reviews_listing ON property_reviews(listing_id);

@@ -14,6 +14,11 @@ export function ListingCard({
     <article className="overflow-hidden rounded-[2rem] border border-black/8 bg-white shadow-soft">
       <div className="border-b border-black/6 bg-sand/40 px-6 py-5">
         <div className="flex flex-wrap gap-2">
+          {listing.featured ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-400 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-navy shadow-sm">
+              ★ Featured
+            </span>
+          ) : null}
           {listing.verified ? <span className="trust-badge">Verified</span> : null}
           {listing.premium ? <span className="stat-badge">Premium</span> : null}
           {listing.urgencyLabel ? <span className="meta-pill">{listing.urgencyLabel}</span> : null}
