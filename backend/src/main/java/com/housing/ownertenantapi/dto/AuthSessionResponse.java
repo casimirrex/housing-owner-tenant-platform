@@ -1,6 +1,7 @@
 package com.housing.ownertenantapi.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 
 @Schema(description = "Response for auth endpoints that return an authenticated session")
 public record AuthSessionResponse(
@@ -14,8 +15,10 @@ public record AuthSessionResponse(
     long expiresInSeconds,
     @Schema(description = "Authenticated user id", example = "user_1a2b3c4d")
     String userId,
-    @Schema(description = "Authenticated user role", example = "TENANT")
+    @Schema(description = "Authenticated user role (currently active)", example = "TENANT")
     String role,
+    @Schema(description = "All roles available to this user (Bug F multi-role)", example = "[\"TENANT\",\"OWNER\"]")
+    List<String> availableRoles,
     @Schema(description = "Authentication method", example = "OTP")
     String authMethod,
     @Schema(description = "Authenticated email address when available", example = "aarav@example.com")

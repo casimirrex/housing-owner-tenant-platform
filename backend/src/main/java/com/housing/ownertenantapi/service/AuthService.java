@@ -84,6 +84,7 @@ public class AuthService {
         .param("updatedAt", now)
         .update();
 
+    ensureUserRole(userId, resolvedRole);
     ensurePreferenceProfile(userId);
 
     return createAndStoreSession(
@@ -136,6 +137,7 @@ public class AuthService {
         .param("updatedAt", now)
         .update();
 
+    ensureUserRole(userId, resolvedRole);
     ensurePreferenceProfile(userId);
 
     return createAndStoreSession(
@@ -352,6 +354,7 @@ public class AuthService {
         3600,
         userId,
         sessionUserIdentity.role(),
+        loadAvailableRoles(userId),
         authMethod,
         sessionUserIdentity.email(),
         sessionUserIdentity.fullName(),
@@ -360,6 +363,31 @@ public class AuthService {
         message,
         1
     );
+  }
+
+  /**
+   * Bug F multi-role support — returns every role this user is entitled to use
+   * (TENANT, OWNER, or both). Backed by the user_roles table populated by the
+   * Phase 1a migration. Falls back to the user's primary role from users.role
+   * if the user_roles row is somehow missing (defensive — should never happen).
+   */
+  private java.util.List<String> loadAvailableRoles(String userId) {
+    java.util.List<String> roles = jdbcClient.sql("""
+            SELECT role FROM user_roles
+            WHERE user_id = :userId
+            ORDER BY granted_at ASC
+            """)
+        .param("userId", userId)
+        .query(String.class)
+        .list();
+    if (roles.isEmpty()) {
+      // Defensive fallback: every user should have at least their primary role here.
+      return jdbcClient.sql("SELECT role FROM users WHERE user_id = :userId")
+          .param("userId", userId)
+          .query(String.class)
+          .list();
+    }
+    return roles;
   }
 
   private void insertAuthFlow(
@@ -561,6 +589,7 @@ public class AuthService {
         .param("updatedAt", updatedAt)
         .update();
 
+    ensureUserRole(userId, resolvedRole);
     upsertGoogleIdentity(userId, googleIdentityProfile, normalizedEmail, updatedAt);
     return userId;
   }
@@ -612,6 +641,26 @@ public class AuthService {
         .param("displayName", googleIdentityProfile.fullName())
         .param("avatarUrl", googleIdentityProfile.pictureUrl())
         .param("updatedAt", updatedAt)
+        .update();
+  }
+
+  /**
+   * Bug F multi-role: ensure a row exists in user_roles for this (user_id, role).
+   * Idempotent — ON CONFLICT DO NOTHING. Called from every registration path so
+   * new users land in user_roles immediately. Existing accounts were backfilled
+   * by the Phase 1a migration.
+   */
+  private void ensureUserRole(String userId, String role) {
+    if (userId == null || role == null) {
+      return;
+    }
+    jdbcClient.sql("""
+            INSERT INTO user_roles (user_id, role, granted_at)
+            VALUES (:userId, :role, CURRENT_TIMESTAMP)
+            ON CONFLICT (user_id, role) DO NOTHING
+            """)
+        .param("userId", userId)
+        .param("role", role)
         .update();
   }
 
