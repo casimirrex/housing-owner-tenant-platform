@@ -728,3 +728,45 @@ export function switchUserRole(role: "TENANT" | "OWNER", accessToken?: string) {
     accessToken
   );
 }
+
+/* ── File upload (Bug G.3 — listing cover photo) ──────────────────────── */
+
+export async function uploadListingPhoto(file: File, accessToken?: string): Promise<{
+  url: string;
+  originalFilename: string;
+  storedFilename: string;
+  sizeBytes: number;
+}> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const headers: Record<string, string> = {};
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+  // Don't set Content-Type — fetch will set the multipart boundary automatically.
+
+  const path = "/api/v1/uploads/listing-photo";
+  // Reuse the same base-url logic as fetchJson but without the JSON header.
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+  const response = await fetch(`${apiBase}${path}`, {
+    method: "POST",
+    body: formData,
+    headers
+  });
+
+  if (!response.ok) {
+    let message = `Upload failed (${response.status})`;
+    try {
+      const payload = await response.json();
+      if (payload?.message) {
+        message = payload.message;
+      }
+    } catch {
+      // ignore — keep the default message
+    }
+    throw new Error(message);
+  }
+
+  return response.json();
+}

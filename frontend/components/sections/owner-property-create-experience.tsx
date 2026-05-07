@@ -12,7 +12,8 @@ import {
   getCurrentUserProfile,
   getOwnerListings,
   getOwnerPremiumAccess,
-  activateOwnerPremium
+  activateOwnerPremium,
+  uploadListingPhoto
 } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -68,6 +69,12 @@ export function OwnerPropertyCreateExperience() {
   const accessToken = session?.accessToken;
   const [listingMsg, setListingMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [latestListingId, setLatestListingId] = useState<string | null>(null);
+  // Bug G.3 — cover photo file upload (replaces the old URL text input)
+  const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
+  const [coverPhotoUrl, setCoverPhotoUrl] = useState<string | null>(null);
+  const [coverPhotoPreview, setCoverPhotoPreview] = useState<string | null>(null);
+  const [coverPhotoUploading, setCoverPhotoUploading] = useState(false);
+  const [coverPhotoError, setCoverPhotoError] = useState<string | null>(null);
 
   const profileQuery = useQuery({
     queryKey: ["owner-profile", accessToken ?? "guest"],
@@ -99,7 +106,8 @@ export function OwnerPropertyCreateExperience() {
       bhk: "2BHK",
       furnishing: "Semi Furnished",
       amenities: "Lift, Security, Power Backup",
-      photos: "https://images.example.com/owners/new-listing-cover.jpg"
+      // photos field is set programmatically after a successful upload (Bug G.3).
+      photos: ""
     }
   });
 
@@ -114,6 +122,59 @@ export function OwnerPropertyCreateExperience() {
       form.setValue("deposit", rentNum * 6, { shouldValidate: false });
     }
   }, [rentValue, depositManuallyEdited, form]);
+
+  // Bug G.3 — cover photo upload handler
+  const handleCoverPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setCoverPhotoError(null);
+    setCoverPhotoFile(file);
+    setCoverPhotoUrl(null);
+    if (coverPhotoPreview) {
+      URL.revokeObjectURL(coverPhotoPreview);
+    }
+    if (!file) {
+      setCoverPhotoPreview(null);
+      form.setValue("photos", "", { shouldValidate: false });
+      return;
+    }
+    // Local validation BEFORE upload
+    const validTypes = ["image/jpeg", "image/jpg", "image/png"];
+    if (!validTypes.includes(file.type)) {
+      setCoverPhotoError("Please pick a JPG or PNG image.");
+      setCoverPhotoPreview(null);
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setCoverPhotoError("Image is larger than 5MB. Please pick a smaller file.");
+      setCoverPhotoPreview(null);
+      return;
+    }
+
+    setCoverPhotoPreview(URL.createObjectURL(file));
+    setCoverPhotoUploading(true);
+    try {
+      const result = await uploadListingPhoto(file, accessToken);
+      setCoverPhotoUrl(result.url);
+      form.setValue("photos", result.url, { shouldValidate: true });
+    } catch (err) {
+      setCoverPhotoError(err instanceof Error ? err.message : "Upload failed. Please try again.");
+      setCoverPhotoUrl(null);
+      form.setValue("photos", "", { shouldValidate: false });
+    } finally {
+      setCoverPhotoUploading(false);
+    }
+  };
+
+  const handleClearCoverPhoto = () => {
+    setCoverPhotoFile(null);
+    setCoverPhotoUrl(null);
+    setCoverPhotoError(null);
+    if (coverPhotoPreview) {
+      URL.revokeObjectURL(coverPhotoPreview);
+    }
+    setCoverPhotoPreview(null);
+    form.setValue("photos", "", { shouldValidate: false });
+  };
 
   const createListingMutation = useMutation({
     mutationFn: (values: OwnerListingValues) => {
@@ -149,8 +210,18 @@ export function OwnerPropertyCreateExperience() {
       form.reset({
         ...form.getValues(),
         title: "",
-        locality: ""
+        locality: "",
+        // Reset cover-photo URL so the next listing starts with a fresh upload.
+        photos: ""
       });
+      // Also clear the file picker UI state so the form looks brand-new.
+      setCoverPhotoFile(null);
+      setCoverPhotoUrl(null);
+      setCoverPhotoError(null);
+      if (coverPhotoPreview) {
+        URL.revokeObjectURL(coverPhotoPreview);
+      }
+      setCoverPhotoPreview(null);
     },
     onError: (error) => {
       setListingMsg({
@@ -527,11 +598,60 @@ export function OwnerPropertyCreateExperience() {
                 <input className="form-control mt-2" {...form.register("amenities")} />
                 <span className="mt-2 block text-xs text-copper">{form.formState.errors.amenities?.message}</span>
               </label>
-              <label className="field-label">
-                Cover photo URL
-                <input className="form-control mt-2" {...form.register("photos")} />
-                <span className="mt-2 block text-xs text-copper">{form.formState.errors.photos?.message}</span>
-              </label>
+              <div className="field-label">
+                <span>Cover photo</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png"
+                  className="mt-2 block w-full cursor-pointer rounded-xl border border-dashed border-black/12 bg-white/80 px-4 py-3 text-sm text-ink/72 file:mr-3 file:rounded-lg file:border-0 file:bg-navy file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-oat hover:file:bg-pine"
+                  onChange={handleCoverPhotoChange}
+                  disabled={coverPhotoUploading}
+                />
+                <p className="mt-2 text-xs text-ink/52">JPG or PNG, max 5MB.</p>
+
+                {coverPhotoUploading ? (
+                  <p className="mt-2 text-xs text-pine">Uploading…</p>
+                ) : null}
+
+                {coverPhotoError ? (
+                  <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                    {coverPhotoError}
+                  </p>
+                ) : null}
+
+                {coverPhotoPreview ? (
+                  <div className="mt-3 flex items-start gap-3 rounded-xl border border-black/8 bg-white p-3">
+                    <img
+                      src={coverPhotoPreview}
+                      alt="Selected cover"
+                      className="h-24 w-32 rounded-lg object-cover"
+                    />
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-ink">{coverPhotoFile?.name ?? "Selected image"}</p>
+                      {coverPhotoUrl ? (
+                        <p className="mt-1 text-xs text-emerald-700">✓ Uploaded — saved on the listing</p>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={handleClearCoverPhoto}
+                        className="mt-2 text-xs font-semibold text-red-600 hover:text-red-800"
+                      >
+                        Remove and pick another
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Hidden field — react-hook-form needs it registered for validation; the URL value is set programmatically after upload. */}
+                <input type="hidden" {...form.register("photos")} />
+                {form.formState.errors.photos ? (
+                  <span className="mt-2 block text-xs text-copper">
+                    {form.formState.errors.photos.message?.includes("8")
+                      ? "Please upload a cover photo to continue."
+                      : form.formState.errors.photos.message}
+                  </span>
+                ) : null}
+              </div>
             </div>
 
             <button className="button-primary mt-2" disabled={createListingMutation.isPending} type="submit">
