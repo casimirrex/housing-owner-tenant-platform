@@ -16,6 +16,7 @@ import {
   activateOwnerPremium
 } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth-store";
+import { OwnerAnalyticsPanel } from "@/components/sections/owner-analytics-panel";
 
 const paymentRecordSchema = z.object({
   tenantEmail:  z.string().email("Enter a valid tenant email"),
@@ -487,6 +488,9 @@ export function OwnerDashboardExperience() {
           </div>
         </div>
       </section>
+
+      {/* ── Owner Analytics — view + save metrics for the portfolio ── */}
+      <OwnerAnalyticsPanel />
 
       {/* ── Assign payment to tenant ── */}
       <section className="mt-8 section-panel">

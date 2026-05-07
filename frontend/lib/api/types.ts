@@ -290,6 +290,27 @@ export interface UserRolesResponse {
   activeRole: string;
 }
 
+export interface OwnerAnalyticsResponse {
+  totals: {
+    totalViews: number;
+    totalSaves: number;
+    totalListings: number;
+    publishedListings: number;
+    viewsLast7Days: number;
+  };
+  perListing: Array<{
+    listingId: string;
+    title: string;
+    city: string;
+    locality: string;
+    status: string;
+    rent: number;
+    views: number;
+    saves: number;
+    viewsLast7Days: number;
+  }>;
+}
+
 export interface AuthFlowResponse {
   flowId: string;
   status: string;

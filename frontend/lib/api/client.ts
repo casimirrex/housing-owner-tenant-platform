@@ -29,6 +29,7 @@ import type {
   UserAccountDeactivationResponse,
   UserPhotoUploadResponse,
   UserPasswordUpdateResponse,
+  OwnerAnalyticsResponse,
   UserPreferenceProfileResponse,
   UserPreferenceUpdateResponse,
   UserProfileResponse,
@@ -724,6 +725,17 @@ export function switchUserRole(role: "TENANT" | "OWNER", accessToken?: string) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role })
     },
+    {},
+    accessToken
+  );
+}
+
+/* ── Owner analytics ───────────────────────────────────────────────────── */
+
+export function getOwnerAnalytics(accessToken?: string) {
+  return fetchJson<OwnerAnalyticsResponse>(
+    "/api/v1/owners/analytics",
+    undefined,
     {},
     accessToken
   );
