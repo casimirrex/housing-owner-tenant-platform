@@ -542,3 +542,13 @@ INSERT INTO feature_entitlements (feature_key, plan_tier, free_limit, descriptio
   ('TENANT_PROPERTY_VIEW', 'FREE',    3,    'Tenant can view full details of 3 unique properties on free tier'),
   ('TENANT_PROPERTY_VIEW', 'PREMIUM', NULL, 'Tenant premium: unlimited property views')
 ON CONFLICT (feature_key, plan_tier) DO NOTHING;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Backfill user_roles from existing users.role
+-- Every user starts with exactly the role they registered as. Adding a second
+-- role (TENANT ↔ OWNER) is done at runtime via POST /api/v1/auth/roles/add.
+-- Idempotent — re-running this block creates no duplicates.
+-- ─────────────────────────────────────────────────────────────────────────────
+INSERT INTO user_roles (user_id, role, granted_at)
+SELECT user_id, role, COALESCE(updated_at, CURRENT_TIMESTAMP) FROM users
+ON CONFLICT (user_id, role) DO NOTHING;

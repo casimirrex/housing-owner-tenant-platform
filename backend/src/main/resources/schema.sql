@@ -7,6 +7,7 @@ DROP TABLE IF EXISTS leases CASCADE;
 DROP TABLE IF EXISTS auth_sessions CASCADE;
 DROP TABLE IF EXISTS auth_flows CASCADE;
 DROP TABLE IF EXISTS auth_identities CASCADE;
+DROP TABLE IF EXISTS user_roles CASCADE;
 DROP TABLE IF EXISTS feature_usage_events CASCADE;
 DROP TABLE IF EXISTS feature_entitlements CASCADE;
 DROP TABLE IF EXISTS user_subscriptions CASCADE;
@@ -184,6 +185,23 @@ CREATE TABLE auth_identities (
   last_login_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (provider, provider_subject)
 );
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Multi-role-per-user support (Bug F)
+-- A user may hold multiple roles (e.g. both TENANT and OWNER).
+-- users.role remains the "primary / currently-active" role for backward compat
+-- with all existing role-gated endpoints. user_roles is the source of truth
+-- for "what roles is this user entitled to use?".
+-- Backfill in data.sql copies one row per existing user from users.role.
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE user_roles (
+  user_id    VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  role       TEXT        NOT NULL CHECK (role IN ('TENANT', 'OWNER')),
+  granted_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, role)
+);
+
+CREATE INDEX idx_user_roles_user ON user_roles(user_id);
 
 CREATE TABLE subscription_plans (
   plan_code VARCHAR(64) PRIMARY KEY,
