@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, IndianRupee, Layers3, Sparkles, Wallet, CreditCard, CheckCircle, X, Crown } from "lucide-react";
@@ -49,13 +49,18 @@ export function OwnerDashboardExperience() {
     defaultValues: {
       tenantEmail:  "",
       listingId:    "",
-      amount:       28000,
+      amount:       "" as unknown as number,
       paymentKind:  "MONTHLY_RENT",
       paymentLabel: "",
       dueDate:      "",
       description:  ""
     }
   });
+
+  // Track whether the user has manually edited the amount field — once they do,
+  // we stop auto-populating from the listing/payment-type combo so we don't clobber
+  // their input. The flag resets when a new payment record is saved.
+  const [amountManuallyEdited, setAmountManuallyEdited] = useState(false);
 
   const profileQuery = useQuery({
     queryKey: ["owner-profile", accessToken ?? "guest"],
@@ -101,12 +106,14 @@ export function OwnerDashboardExperience() {
       paymentForm.reset({
         tenantEmail: "",
         listingId: "",
-        amount: 28000,
+        amount: "" as unknown as number,
         paymentKind: "MONTHLY_RENT",
         paymentLabel: "",
         dueDate: "",
         description: ""
       });
+      // Reset manual-edit flag so the next record auto-fills again from the picked listing.
+      setAmountManuallyEdited(false);
     },
     onError: (error) => {
       setPaymentMsg({ type: "error", text: error instanceof Error ? error.message : "Could not create payment record." });
@@ -128,6 +135,47 @@ export function OwnerDashboardExperience() {
       });
     }
   });
+
+  // Bug H — auto-populate Amount based on the selected Listing ID + Payment Type.
+  // Picks rent for MONTHLY_RENT / BOOKING_TOKEN, deposit for SECURITY_DEPOSIT.
+  // Skips MAINTENANCE (no canonical amount in listing). Stops once the user has
+  // manually edited the field so we don't clobber their input.
+  const watchedListingId = paymentForm.watch("listingId");
+  const watchedPaymentKind = paymentForm.watch("paymentKind");
+  useEffect(() => {
+    if (amountManuallyEdited) return;
+    const items = listingsQuery.data?.items ?? [];
+    const listing = items.find((l) => l.listingId === watchedListingId);
+    if (!listing) return;
+
+    let suggested: number | undefined;
+    switch (watchedPaymentKind) {
+      case "MONTHLY_RENT":
+      case "BOOKING_TOKEN":
+        suggested = listing.rent;
+        break;
+      case "SECURITY_DEPOSIT":
+        suggested = listing.deposit;
+        break;
+      default:
+        return; // MAINTENANCE — no canonical value, leave alone
+    }
+
+    if (suggested !== undefined) {
+      paymentForm.setValue("amount", suggested, { shouldValidate: false });
+      // Also suggest a sensible default label if the user hasn't typed one yet.
+      const currentLabel = paymentForm.getValues("paymentLabel");
+      if (!currentLabel) {
+        const labelMap: Record<string, string> = {
+          MONTHLY_RENT: "Monthly rent",
+          SECURITY_DEPOSIT: "Security deposit",
+          BOOKING_TOKEN: "Booking token"
+        };
+        const prefix = labelMap[watchedPaymentKind] ?? "Payment";
+        paymentForm.setValue("paymentLabel", `${prefix} for ${listing.title}`, { shouldValidate: false });
+      }
+    }
+  }, [watchedListingId, watchedPaymentKind, amountManuallyEdited, listingsQuery.data, paymentForm]);
 
   if (!session) {
     return (
@@ -522,8 +570,13 @@ export function OwnerDashboardExperience() {
               className="form-control mt-2"
               type="number"
               min="1"
-              {...paymentForm.register("amount")}
+              {...paymentForm.register("amount", {
+                onChange: () => setAmountManuallyEdited(true)
+              })}
             />
+            <span className="mt-1 block text-xs text-ink/52">
+              Auto-filled from the listing&apos;s rent / deposit. You can override.
+            </span>
             <span className="mt-1 block text-xs text-copper">
               {paymentForm.formState.errors.amount?.message}
             </span>
