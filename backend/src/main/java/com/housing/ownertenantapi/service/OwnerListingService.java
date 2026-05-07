@@ -29,17 +29,20 @@ public class OwnerListingService {
   private final CurrentSessionService currentSessionService;
   private final TenantPremiumService premiumService;
   private final EntitlementService entitlementService;
+  private final SavedSearchService savedSearchService;
 
   public OwnerListingService(
       JdbcTemplate jdbcTemplate,
       CurrentSessionService currentSessionService,
       TenantPremiumService premiumService,
-      EntitlementService entitlementService
+      EntitlementService entitlementService,
+      SavedSearchService savedSearchService
   ) {
     this.jdbcTemplate = jdbcTemplate;
     this.currentSessionService = currentSessionService;
     this.premiumService = premiumService;
     this.entitlementService = entitlementService;
+    this.savedSearchService = savedSearchService;
   }
 
   public OwnerListingCreateResponse createListing(
@@ -123,6 +126,13 @@ public class OwnerListingService {
 
     replaceAmenities(listingId, request.amenities());
     replacePhotos(listingId, request.photos());
+
+    // Tier 2 #4 — fan out alerts to tenants whose saved searches match this
+    // newly-published listing. Best-effort: fanoutForNewListing catches all
+    // exceptions internally, so listing creation NEVER fails because of this.
+    if ("PUBLISHED".equalsIgnoreCase(listingStatus)) {
+      savedSearchService.fanoutForNewListing(listingId);
+    }
 
     return new OwnerListingCreateResponse(listingId, listingStatus, formatTimestamp(createdAt));
   }

@@ -35,6 +35,9 @@ import type {
   OwnerLeadsResponse,
   OwnerVerificationResponse,
   OwnerVisitsResponse,
+  SavedSearchAlertsResponse,
+  SavedSearchRequestBody,
+  SavedSearchResponse,
   VisitScheduleResponse,
   VisitSlotsResponse,
   UserPreferenceProfileResponse,
@@ -850,6 +853,66 @@ export function getOwnerVisits(accessToken?: string) {
   return fetchJson<OwnerVisitsResponse>(
     "/api/v1/owners/visits",
     undefined,
+    {},
+    accessToken
+  );
+}
+
+/* ── Saved Searches + Alerts (Tier 2 #4) ──────────────────────────────── */
+
+export function createSavedSearch(body: SavedSearchRequestBody, accessToken?: string) {
+  return fetchJson<SavedSearchResponse>(
+    "/api/v1/saved-searches",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    },
+    {},
+    accessToken
+  );
+}
+
+export function listSavedSearches(accessToken?: string) {
+  return fetchJson<SavedSearchResponse[]>(
+    "/api/v1/saved-searches",
+    undefined,
+    {},
+    accessToken
+  );
+}
+
+export function deleteSavedSearch(searchId: string, accessToken?: string) {
+  return fetchJson<void>(
+    `/api/v1/saved-searches/${encodeURIComponent(searchId)}`,
+    { method: "DELETE" },
+    {},
+    accessToken
+  );
+}
+
+export function listSavedSearchAlerts(accessToken?: string) {
+  return fetchJson<SavedSearchAlertsResponse>(
+    "/api/v1/saved-searches/alerts",
+    undefined,
+    {},
+    accessToken
+  );
+}
+
+export function markAlertRead(alertId: string, accessToken?: string) {
+  return fetchJson<void>(
+    `/api/v1/saved-searches/alerts/${encodeURIComponent(alertId)}/read`,
+    { method: "PATCH" },
+    {},
+    accessToken
+  );
+}
+
+export function markAllAlertsRead(accessToken?: string) {
+  return fetchJson<void>(
+    "/api/v1/saved-searches/alerts/read-all",
+    { method: "POST" },
     {},
     accessToken
   );

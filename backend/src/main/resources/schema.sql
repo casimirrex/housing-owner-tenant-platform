@@ -19,6 +19,8 @@ DROP TABLE IF EXISTS visits CASCADE;
 DROP TABLE IF EXISTS visit_rules CASCADE;
 DROP TABLE IF EXISTS visit_slots CASCADE;
 DROP TABLE IF EXISTS alerts CASCADE;
+DROP TABLE IF EXISTS saved_search_alerts CASCADE;
+DROP TABLE IF EXISTS saved_searches CASCADE;
 DROP TABLE IF EXISTS lead_requests CASCADE;
 DROP TABLE IF EXISTS matches CASCADE;
 DROP TABLE IF EXISTS saved_listings CASCADE;
@@ -423,6 +425,39 @@ CREATE TABLE saved_listings (
   saved_at TIMESTAMPTZ NOT NULL,
   PRIMARY KEY (user_id, listing_id)
 );
+
+-- Tier 2 #4: Saved Searches + Alerts.
+-- Tenant saves search criteria; whenever a new listing matching the criteria
+-- is published, an alert row is inserted. notification_email reserved for
+-- future SMTP wire-up — for now alerts are surfaced in-app only.
+CREATE TABLE saved_searches (
+  search_id          VARCHAR(64) PRIMARY KEY,
+  user_id            VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  name               TEXT NOT NULL,
+  -- Criteria JSON shape: { city, query, bhk[], furnishing, verified, rentMin, rentMax }
+  criteria_json      TEXT NOT NULL,
+  notification_email TEXT,
+  active             BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_saved_searches_user ON saved_searches(user_id, active, created_at DESC);
+
+CREATE TABLE saved_search_alerts (
+  alert_id    VARCHAR(64) PRIMARY KEY,
+  search_id   VARCHAR(64) NOT NULL REFERENCES saved_searches(search_id) ON DELETE CASCADE,
+  user_id     VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  listing_id  VARCHAR(64) NOT NULL REFERENCES listings(listing_id) ON DELETE CASCADE,
+  status      TEXT NOT NULL DEFAULT 'NEW' CHECK (status IN ('NEW','READ','DISMISSED')),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  read_at     TIMESTAMPTZ,
+  -- Same listing should never alert the same saved search twice.
+  CONSTRAINT uniq_alert_per_search_listing UNIQUE (search_id, listing_id)
+);
+
+CREATE INDEX idx_saved_search_alerts_user_status
+  ON saved_search_alerts(user_id, status, created_at DESC);
 
 -- Tier 1 #3: Pay-to-Contact / Express Interest leads.
 -- Tenant pays Rs 49 from their wallet to express interest in a listing.

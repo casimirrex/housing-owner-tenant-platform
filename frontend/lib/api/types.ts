@@ -539,6 +539,52 @@ export interface VisitScheduleResponse {
   propertySummary: VisitPropertySummaryResponse;
 }
 
+export interface SavedSearchRequestBody {
+  name: string;
+  city?: string;
+  query?: string;
+  bhk?: string[];
+  furnishing?: string;
+  verified?: boolean;
+  rentMin?: number;
+  rentMax?: number;
+  notificationEmail?: string;
+}
+
+export interface SavedSearchResponse {
+  searchId: string;
+  name: string;
+  city: string | null;
+  query: string | null;
+  bhk: string[] | null;
+  furnishing: string | null;
+  verified: boolean | null;
+  rentMin: number | null;
+  rentMax: number | null;
+  notificationEmail: string | null;
+  active: boolean;
+  createdAt: string;
+  unreadAlerts: number;
+  totalAlerts: number;
+}
+
+export interface SavedSearchAlertsResponse {
+  alerts: Array<{
+    alertId: string;
+    searchId: string;
+    searchName: string;
+    listingId: string;
+    listingTitle: string;
+    listingLocality: string;
+    listingCity: string;
+    listingRent: number;
+    listingBhk: string;
+    status: "NEW" | "READ" | "DISMISSED";
+    createdAt: string;
+  }>;
+  unreadCount: number;
+}
+
 export interface OwnerVisitsResponse {
   visits: Array<{
     visitId: string;

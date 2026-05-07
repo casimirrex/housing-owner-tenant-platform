@@ -7,6 +7,7 @@ import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ListingCard } from "@/components/ui/listing-card";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { SaveSearchButton } from "@/components/ui/save-search-button";
 import { getFilterMetadata, searchListings, searchMap } from "@/lib/api/client";
 import type { SearchMapRequest } from "@/lib/api/types";
 import { useSearchStore } from "@/store/search-store";
@@ -137,12 +138,19 @@ export function SearchExperience({
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {activeFilters.map((filter) => (
               <span className="meta-pill" key={filter}>
                 {filter}
               </span>
             ))}
+            <SaveSearchButton
+              city={city}
+              query={query}
+              bhk={bhk}
+              budgetMax={budgetMax}
+              verified={verified}
+            />
           </div>
         </div>
       </section>
