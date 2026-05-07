@@ -34,6 +34,9 @@ import type {
   OwnerAnalyticsResponse,
   OwnerLeadsResponse,
   OwnerVerificationResponse,
+  OwnerVisitsResponse,
+  VisitScheduleResponse,
+  VisitSlotsResponse,
   UserPreferenceProfileResponse,
   UserPreferenceUpdateResponse,
   UserProfileResponse,
@@ -806,6 +809,46 @@ export function expressInterest(
 export function getOwnerLeads(accessToken?: string) {
   return fetchJson<OwnerLeadsResponse>(
     "/api/v1/owners/leads",
+    undefined,
+    {},
+    accessToken
+  );
+}
+
+/* ── Visit Booking (Tier 2 #5) ────────────────────────────────────────── */
+
+export function getVisitSlots(
+  propertyId: string,
+  date: string,
+  accessToken?: string
+) {
+  return fetchJson<VisitSlotsResponse>(
+    "/api/v1/visits/slots",
+    undefined,
+    { propertyId, date },
+    accessToken
+  );
+}
+
+export function scheduleVisit(
+  request: { propertyId: string; slotId: string; preferredDate: string; notes?: string },
+  accessToken?: string
+) {
+  return fetchJson<VisitScheduleResponse>(
+    "/api/v1/visits",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request)
+    },
+    {},
+    accessToken
+  );
+}
+
+export function getOwnerVisits(accessToken?: string) {
+  return fetchJson<OwnerVisitsResponse>(
+    "/api/v1/owners/visits",
     undefined,
     {},
     accessToken

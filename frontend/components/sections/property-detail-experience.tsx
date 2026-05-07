@@ -16,6 +16,7 @@ import {
   Wallet
 } from "lucide-react";
 import { ExpressInterestModal } from "@/components/ui/express-interest-modal";
+import { ScheduleVisitModal } from "@/components/ui/schedule-visit-modal";
 import { ShortlistButton } from "@/components/ui/shortlist-button";
 import { SectionHeading } from "@/components/ui/section-heading";
 import {
@@ -53,6 +54,9 @@ export function PropertyDetailExperience({
   // Tier 1 #3 — Express Interest modal state
   const [expressInterestOpen, setExpressInterestOpen] = useState(false);
   const [interestSentMsg, setInterestSentMsg] = useState<string | null>(null);
+  // Tier 2 #5 — Schedule Visit modal state
+  const [scheduleVisitOpen, setScheduleVisitOpen] = useState(false);
+  const [visitConfirmedMsg, setVisitConfirmedMsg] = useState<string | null>(null);
 
   const detailQuery = useQuery({
     queryKey: ["property-detail", propertyId, accessToken ?? "guest"],
@@ -493,16 +497,26 @@ export function PropertyDetailExperience({
               </h3>
               <p className="mt-2 text-sm text-ink/68">{detail.ownerInfo.badge}</p>
 
-              {/* Tier 1 #3 — Express Interest CTA (tenants only, when full access is granted) */}
+              {/* Tier 1 #3 + Tier 2 #5 — tenant CTAs when full access is granted */}
               {sessionRole === "TENANT" && fullAccess ? (
-                <button
-                  type="button"
-                  onClick={() => setExpressInterestOpen(true)}
-                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-rose-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-rose-600"
-                >
-                  <Heart className="h-4 w-4" />
-                  Express Interest (Rs 49)
-                </button>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setExpressInterestOpen(true)}
+                    className="inline-flex items-center gap-2 rounded-full bg-rose-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-rose-600"
+                  >
+                    <Heart className="h-4 w-4" />
+                    Express Interest (Rs 49)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScheduleVisitOpen(true)}
+                    className="inline-flex items-center gap-2 rounded-full bg-pine px-5 py-2.5 text-sm font-semibold text-white hover:bg-pine/90"
+                  >
+                    <CalendarClock className="h-4 w-4" />
+                    Schedule a visit
+                  </button>
+                </div>
               ) : null}
 
               <div className="mt-6 grid gap-3">
@@ -615,6 +629,39 @@ export function PropertyDetailExperience({
             queryClient.invalidateQueries({ queryKey: ["wallet-dashboard", accessToken ?? "guest"] });
           }}
         />
+      ) : null}
+
+      {/* Tier 2 #5 — Schedule Visit modal */}
+      {scheduleVisitOpen ? (
+        <ScheduleVisitModal
+          listingId={propertyId}
+          listingTitle={detail.property.title}
+          listingLocality={detail.property.locality}
+          listingCity={detail.property.city}
+          onClose={() => setScheduleVisitOpen(false)}
+          onScheduled={(visit) => {
+            setScheduleVisitOpen(false);
+            setVisitConfirmedMsg(
+              `✅ Visit confirmed for ${visit.preferredDate} at ${visit.slotLabel}. The owner will see it in their dashboard.`
+            );
+            queryClient.invalidateQueries({ queryKey: ["tenant-visits", accessToken ?? "guest"] });
+          }}
+        />
+      ) : null}
+
+      {/* Toast — visit confirmed */}
+      {visitConfirmedMsg ? (
+        <div className="fixed bottom-6 right-6 z-40 max-w-sm rounded-2xl border border-pine/30 bg-pine/8 px-5 py-4 text-sm text-pine shadow-soft">
+          <p className="font-semibold">Visit booked!</p>
+          <p className="mt-1 text-ink/72">{visitConfirmedMsg}</p>
+          <button
+            type="button"
+            onClick={() => setVisitConfirmedMsg(null)}
+            className="mt-3 text-xs font-semibold text-pine hover:text-navy"
+          >
+            Dismiss
+          </button>
+        </div>
       ) : null}
 
       {/* Toast — appears after a successful Express Interest */}

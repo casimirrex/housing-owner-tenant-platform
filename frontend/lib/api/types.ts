@@ -518,6 +518,46 @@ export interface VisitsResponse {
   pagination: PaginationResponse;
 }
 
+export interface VisitSlot {
+  slotId: string;
+  label: string;
+  startTime: string;
+  endTime: string;
+  available: boolean;
+}
+
+export interface VisitSlotsResponse {
+  slots: VisitSlot[];
+  timeZone: string;
+  visitRules: string[];
+}
+
+export interface VisitScheduleResponse {
+  visitId: string;
+  status: string;
+  scheduledAt: string;
+  propertySummary: VisitPropertySummaryResponse;
+}
+
+export interface OwnerVisitsResponse {
+  visits: Array<{
+    visitId: string;
+    listingId: string;
+    listingTitle: string;
+    tenantId: string;
+    tenantName: string;
+    tenantEmail: string;
+    tenantPhone: string | null;
+    slotId: string;
+    slotLabel: string;
+    preferredDate: string;
+    notes: string | null;
+    status: "SCHEDULED" | "COMPLETED" | "CANCELLED";
+    scheduledAt: string;
+  }>;
+  upcomingCount: number;
+}
+
 export interface OwnerListingItemResponse {
   listingId: string;
   title: string;
