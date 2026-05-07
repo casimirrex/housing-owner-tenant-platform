@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { ExpressInterestModal } from "@/components/ui/express-interest-modal";
 import { ScheduleVisitModal } from "@/components/ui/schedule-visit-modal";
+import { AddToCompareButton } from "@/components/ui/add-to-compare-button";
 import { ShortlistButton } from "@/components/ui/shortlist-button";
 import { SectionHeading } from "@/components/ui/section-heading";
 import {
@@ -497,7 +498,7 @@ export function PropertyDetailExperience({
               </h3>
               <p className="mt-2 text-sm text-ink/68">{detail.ownerInfo.badge}</p>
 
-              {/* Tier 1 #3 + Tier 2 #5 — tenant CTAs when full access is granted */}
+              {/* Tier 1 #3 + Tier 2 #5 + Tier 2 #7 — tenant CTAs when full access is granted */}
               {sessionRole === "TENANT" && fullAccess ? (
                 <div className="mt-4 flex flex-wrap gap-3">
                   <button
@@ -516,6 +517,7 @@ export function PropertyDetailExperience({
                     <CalendarClock className="h-4 w-4" />
                     Schedule a visit
                   </button>
+                  <AddToCompareButton listingId={propertyId} variant="primary" />
                 </div>
               ) : null}
 

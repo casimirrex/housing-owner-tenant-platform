@@ -8,6 +8,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { logoutSession } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth-store";
 import { RoleSwitcher } from "@/components/ui/role-switcher";
+import { CompareFloatingBar } from "@/components/ui/compare-floating-bar";
 
 const guestNavItems = [
   { href: "/search",           label: "Search" },
@@ -258,6 +259,9 @@ export function SiteChrome({ children }: { children: ReactNode }) {
       </header>
 
       {children}
+
+      {/* Tier 2 #7 — floating compare bar (visible only when user has selected listings) */}
+      <CompareFloatingBar />
 
       <footer className="px-4 pb-10 pt-6 md:px-6">
         <div className="mx-auto max-w-7xl">

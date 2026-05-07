@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ListingSummary } from "@/lib/api/types";
+import { AddToCompareButton } from "@/components/ui/add-to-compare-button";
 
 export function ListingCard({
   listing,
@@ -64,6 +65,7 @@ export function ListingCard({
             Quick summary for renters who want pricing and timing upfront.
           </p>
           <div className="flex flex-wrap gap-2.5">
+            <AddToCompareButton listingId={listing.listingId} variant="pill" />
             {cityHref ? (
               <Link className="button-secondary px-4 py-2 text-sm" href={cityHref}>
                 Explore city
