@@ -17,6 +17,8 @@ public record PropertyOwnerInfoResponse(
     @Schema(description = "Owner badge", example = "Top responsive owner")
     String badge,
     @Schema(description = "Years on platform", example = "3")
-    int yearsOnPlatform
+    int yearsOnPlatform,
+    @Schema(description = "Whether the owner has paid for Verified Owner badge (Tier 1 #2)", example = "true")
+    boolean verifiedOwner
 ) {
 }

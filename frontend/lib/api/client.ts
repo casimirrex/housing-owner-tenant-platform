@@ -29,8 +29,11 @@ import type {
   UserAccountDeactivationResponse,
   UserPhotoUploadResponse,
   UserPasswordUpdateResponse,
+  LeadContactResponse,
   ListingPromotionResponse,
   OwnerAnalyticsResponse,
+  OwnerLeadsResponse,
+  OwnerVerificationResponse,
   UserPreferenceProfileResponse,
   UserPreferenceUpdateResponse,
   UserProfileResponse,
@@ -756,6 +759,54 @@ export function promoteListing(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ durationDays })
     },
+    {},
+    accessToken
+  );
+}
+
+/* ── Verified Owner Badge (Tier 1 #2) ─────────────────────────────────── */
+
+export function getOwnerVerification(accessToken?: string) {
+  return fetchJson<OwnerVerificationResponse>(
+    "/api/v1/owners/verification",
+    undefined,
+    {},
+    accessToken
+  );
+}
+
+export function purchaseOwnerVerification(accessToken?: string) {
+  return fetchJson<OwnerVerificationResponse>(
+    "/api/v1/owners/verification",
+    { method: "POST" },
+    {},
+    accessToken
+  );
+}
+
+/* ── Pay-to-Contact / Express Interest (Tier 1 #3) ────────────────────── */
+
+export function expressInterest(
+  listingId: string,
+  message: string | null,
+  accessToken?: string
+) {
+  return fetchJson<LeadContactResponse>(
+    `/api/v1/properties/${encodeURIComponent(listingId)}/contact`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: message || "" })
+    },
+    {},
+    accessToken
+  );
+}
+
+export function getOwnerLeads(accessToken?: string) {
+  return fetchJson<OwnerLeadsResponse>(
+    "/api/v1/owners/leads",
+    undefined,
     {},
     accessToken
   );

@@ -17,6 +17,8 @@ import {
 } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth-store";
 import { OwnerAnalyticsPanel } from "@/components/sections/owner-analytics-panel";
+import { OwnerVerificationPanel } from "@/components/sections/owner-verification-panel";
+import { OwnerLeadsPanel } from "@/components/sections/owner-leads-panel";
 import { PromoteListingModal } from "@/components/ui/promote-listing-modal";
 import { Rocket } from "lucide-react";
 
@@ -506,6 +508,12 @@ export function OwnerDashboardExperience() {
           </div>
         </div>
       </section>
+
+      {/* ── Verified Owner Badge (Tier 1 #2) ── */}
+      <OwnerVerificationPanel />
+
+      {/* ── Tenant Leads inbox (Tier 1 #3) ── */}
+      <OwnerLeadsPanel />
 
       {/* ── Owner Analytics — view + save metrics for the portfolio ── */}
       <OwnerAnalyticsPanel />

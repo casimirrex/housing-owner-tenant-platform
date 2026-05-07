@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -9,11 +9,13 @@ import {
   Building2,
   CalendarClock,
   Crown,
+  Heart,
   Lock,
   MessageSquareMore,
   PhoneCall,
   Wallet
 } from "lucide-react";
+import { ExpressInterestModal } from "@/components/ui/express-interest-modal";
 import { ShortlistButton } from "@/components/ui/shortlist-button";
 import { SectionHeading } from "@/components/ui/section-heading";
 import {
@@ -48,6 +50,9 @@ export function PropertyDetailExperience({
   const accessToken = useAuthStore((state) => state.session?.accessToken);
   const sessionRole = useAuthStore((state) => state.session?.role ?? null);
   const queryClient = useQueryClient();
+  // Tier 1 #3 — Express Interest modal state
+  const [expressInterestOpen, setExpressInterestOpen] = useState(false);
+  const [interestSentMsg, setInterestSentMsg] = useState<string | null>(null);
 
   const detailQuery = useQuery({
     queryKey: ["property-detail", propertyId, accessToken ?? "guest"],
@@ -477,11 +482,29 @@ export function PropertyDetailExperience({
           <div className="grid gap-8">
             <div className="section-panel">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-copper">Owner details</p>
-              <h3 className="mt-4 flex items-center gap-3 text-2xl font-semibold text-ink">
+              <h3 className="mt-4 flex flex-wrap items-center gap-3 text-2xl font-semibold text-ink">
                 <Building2 className="h-6 w-6 text-pine" />
                 {detail.ownerInfo.name}
+                {detail.ownerInfo.verifiedOwner ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
+                    ✓ Verified Owner
+                  </span>
+                ) : null}
               </h3>
               <p className="mt-2 text-sm text-ink/68">{detail.ownerInfo.badge}</p>
+
+              {/* Tier 1 #3 — Express Interest CTA (tenants only, when full access is granted) */}
+              {sessionRole === "TENANT" && fullAccess ? (
+                <button
+                  type="button"
+                  onClick={() => setExpressInterestOpen(true)}
+                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-rose-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-rose-600"
+                >
+                  <Heart className="h-4 w-4" />
+                  Express Interest (Rs 49)
+                </button>
+              ) : null}
+
               <div className="mt-6 grid gap-3">
                 <div className="soft-panel">
                   <p className="text-sm text-ink/68">Contact</p>
@@ -576,6 +599,38 @@ export function PropertyDetailExperience({
           </div>
         </section>
       )}
+
+      {/* Tier 1 #3 — Express Interest modal */}
+      {expressInterestOpen ? (
+        <ExpressInterestModal
+          listingId={propertyId}
+          listingTitle={detail.property.title}
+          ownerName={detail.ownerInfo.name}
+          onClose={() => setExpressInterestOpen(false)}
+          onSent={(result) => {
+            setExpressInterestOpen(false);
+            setInterestSentMsg(
+              `✅ Interest sent. Wallet balance: Rs ${result.walletBalance.toLocaleString("en-IN")}.`
+            );
+            queryClient.invalidateQueries({ queryKey: ["wallet-dashboard", accessToken ?? "guest"] });
+          }}
+        />
+      ) : null}
+
+      {/* Toast — appears after a successful Express Interest */}
+      {interestSentMsg ? (
+        <div className="fixed bottom-6 right-6 z-40 max-w-sm rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-900 shadow-soft">
+          <p className="font-semibold">Lead sent!</p>
+          <p className="mt-1 text-emerald-800/80">{interestSentMsg}</p>
+          <button
+            type="button"
+            onClick={() => setInterestSentMsg(null)}
+            className="mt-3 text-xs font-semibold text-emerald-700 hover:text-emerald-900"
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
     </main>
   );
 }

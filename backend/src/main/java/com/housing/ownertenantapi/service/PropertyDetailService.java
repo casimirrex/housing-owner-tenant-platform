@@ -378,6 +378,13 @@ public class PropertyDetailService {
   }
 
   private PropertyOwnerInfoResponse fullOwnerInfo(PropertyRecord property, String ownerResponseTimeLabel) {
+    boolean verifiedOwner = property.ownerId() != null && Boolean.TRUE.equals(
+        jdbcTemplate.query(
+            "SELECT verified_owner FROM users WHERE user_id = ?",
+            rs -> rs.next() ? rs.getBoolean("verified_owner") : Boolean.FALSE,
+            property.ownerId()
+        )
+    );
     return new PropertyOwnerInfoResponse(
         property.ownerId(),
         property.ownerName(),
@@ -385,7 +392,8 @@ public class PropertyDetailService {
         ownerResponseTimeLabel,
         property.ownerPreferredLanguage(),
         property.ownerBadge(),
-        property.ownerYearsOnPlatform()
+        property.ownerYearsOnPlatform(),
+        verifiedOwner
     );
   }
 
@@ -397,7 +405,8 @@ public class PropertyDetailService {
         "Owner response insights unlock with premium access.",
         "Premium only",
         "Protected owner profile",
-        0
+        0,
+        false
     );
   }
 

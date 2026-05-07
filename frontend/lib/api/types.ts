@@ -23,6 +23,42 @@ export interface ListingPromotionResponse {
   message: string;
 }
 
+export interface OwnerVerificationResponse {
+  verified: boolean;
+  verifiedAt: string | null;
+  amountPaid: number;
+  currency: string;
+  walletBalance: number;
+  message: string;
+}
+
+export interface LeadContactResponse {
+  leadId: string;
+  listingId: string;
+  amountPaid: number;
+  currency: string;
+  walletBalance: number;
+  createdAt: string;
+  message: string;
+}
+
+export interface OwnerLeadsResponse {
+  leads: Array<{
+    leadId: string;
+    listingId: string;
+    listingTitle: string;
+    tenantId: string;
+    tenantName: string;
+    tenantEmail: string;
+    tenantPhone: string | null;
+    message: string | null;
+    status: "NEW" | "VIEWED" | "RESPONDED" | "ARCHIVED";
+    amountPaid: number;
+    createdAt: string;
+  }>;
+  newCount: number;
+}
+
 export interface RecommendationItem {
   listingId: string;
   title: string;
@@ -212,6 +248,8 @@ export interface PropertyDetailResponse {
     preferredLanguage: string;
     badge: string;
     yearsOnPlatform: number;
+    /** Tier 1 #2 — Verified Owner Badge */
+    verifiedOwner?: boolean;
   };
   ctaFlags: {
     canScheduleVisit: boolean;

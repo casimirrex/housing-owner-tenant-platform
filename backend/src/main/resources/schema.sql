@@ -19,6 +19,7 @@ DROP TABLE IF EXISTS visits CASCADE;
 DROP TABLE IF EXISTS visit_rules CASCADE;
 DROP TABLE IF EXISTS visit_slots CASCADE;
 DROP TABLE IF EXISTS alerts CASCADE;
+DROP TABLE IF EXISTS lead_requests CASCADE;
 DROP TABLE IF EXISTS matches CASCADE;
 DROP TABLE IF EXISTS saved_listings CASCADE;
 DROP TABLE IF EXISTS property_faq CASCADE;
@@ -168,6 +169,10 @@ CREATE TABLE users (
   upi_id TEXT,
   photo_url TEXT,
   profile_completion INTEGER NOT NULL DEFAULT 0,
+  -- Tier 1 Verified Owner Badge (Rs 199 one-time): owner-paid trust signal.
+  -- Becomes a "Verified Owner" pill on every listing they own.
+  verified_owner BOOLEAN NOT NULL DEFAULT FALSE,
+  verified_owner_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   deactivated_at TIMESTAMPTZ
 );
@@ -418,6 +423,29 @@ CREATE TABLE saved_listings (
   saved_at TIMESTAMPTZ NOT NULL,
   PRIMARY KEY (user_id, listing_id)
 );
+
+-- Tier 1 #3: Pay-to-Contact / Express Interest leads.
+-- Tenant pays Rs 49 from their wallet to express interest in a listing.
+-- Owner reviews leads from the dashboard and contacts the tenant directly.
+CREATE TABLE lead_requests (
+  lead_id      VARCHAR(64) PRIMARY KEY,
+  tenant_id    VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  listing_id   VARCHAR(64) NOT NULL REFERENCES listings(listing_id) ON DELETE CASCADE,
+  owner_id     VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  message      TEXT,
+  amount_paid  BIGINT NOT NULL,
+  currency     VARCHAR(3) NOT NULL DEFAULT 'INR',
+  status       TEXT NOT NULL DEFAULT 'NEW' CHECK (status IN ('NEW','VIEWED','RESPONDED','ARCHIVED')),
+  payment_reference TEXT,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Owner dashboard query: list-leads-by-owner (newest first)
+CREATE INDEX idx_lead_requests_owner ON lead_requests(owner_id, created_at DESC);
+-- Avoid duplicate spam: one tenant can't blast the same listing repeatedly.
+-- We'll enforce in app + this index helps look up "has this tenant already led this listing?"
+CREATE INDEX idx_lead_requests_tenant_listing ON lead_requests(tenant_id, listing_id, created_at DESC);
 
 CREATE TABLE matches (
   user_id VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
