@@ -274,6 +274,8 @@ export interface AuthSessionResponse {
   expiresInSeconds: number;
   userId: string;
   role: string;
+  /** Bug F multi-role: every role this user is entitled to (TENANT, OWNER, or both). */
+  availableRoles?: string[];
   authMethod: string;
   email: string | null;
   fullName: string | null;
@@ -281,6 +283,11 @@ export interface AuthSessionResponse {
   emailVerified: boolean | null;
   message: string;
   phase: number;
+}
+
+export interface UserRolesResponse {
+  availableRoles: string[];
+  activeRole: string;
 }
 
 export interface AuthFlowResponse {

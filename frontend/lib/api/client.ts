@@ -33,6 +33,7 @@ import type {
   UserPreferenceUpdateResponse,
   UserProfileResponse,
   UserProfileUpdateResponse,
+  UserRolesResponse,
   UserVerificationStatusResponse,
   VisitsResponse,
   WalletDashboardResponse,
@@ -685,6 +686,43 @@ export function activateOwnerPremium(accessToken?: string) {
     "/api/v1/subscriptions/owner-premium/activate",
     {
       method: "POST"
+    },
+    {},
+    accessToken
+  );
+}
+
+/* ── Role management (Bug F multi-role) ────────────────────────────────── */
+
+export function getUserRoles(accessToken?: string) {
+  return fetchJson<UserRolesResponse>(
+    "/api/v1/auth/roles/me",
+    undefined,
+    {},
+    accessToken
+  );
+}
+
+export function addUserRole(role: "TENANT" | "OWNER", accessToken?: string) {
+  return fetchJson<UserRolesResponse>(
+    "/api/v1/auth/roles/add",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role })
+    },
+    {},
+    accessToken
+  );
+}
+
+export function switchUserRole(role: "TENANT" | "OWNER", accessToken?: string) {
+  return fetchJson<UserRolesResponse>(
+    "/api/v1/auth/roles/switch",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role })
     },
     {},
     accessToken

@@ -7,6 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { logoutSession } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth-store";
+import { RoleSwitcher } from "@/components/ui/role-switcher";
 
 const guestNavItems = [
   { href: "/search",           label: "Search" },
@@ -236,7 +237,10 @@ export function SiteChrome({ children }: { children: ReactNode }) {
               ))}
             </nav>
 
-            <HeaderAccountActions />
+            <div className="flex items-center gap-3">
+              <RoleSwitcher />
+              <HeaderAccountActions />
+            </div>
           </div>
 
           <nav className="mt-4 flex gap-2 overflow-x-auto pb-0.5 lg:hidden">
