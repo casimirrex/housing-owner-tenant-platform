@@ -784,7 +784,12 @@ export function SignupExperience({
                     </label>
                     <label className="text-sm font-medium text-ink/78">
                       Furnishing preference
-                      <input className="mt-2 w-full rounded-2xl border border-black/8 bg-white/80 px-4 py-3 outline-none" {...preferencesForm.register("furnishingPreference")} />
+                      <select className="mt-2 w-full rounded-2xl border border-black/8 bg-white/80 px-4 py-3 outline-none" {...preferencesForm.register("furnishingPreference")}>
+                        <option value="">Select furnishing</option>
+                        <option value="Fully Furnished">Fully Furnished</option>
+                        <option value="Semi Furnished">Semi Furnished</option>
+                        <option value="Unfurnished">Unfurnished</option>
+                      </select>
                       <span className="mt-2 block text-xs text-copper">{preferencesForm.formState.errors.furnishingPreference?.message}</span>
                     </label>
                   </div>

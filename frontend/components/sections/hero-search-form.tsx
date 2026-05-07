@@ -6,25 +6,26 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+const SUPPORTED_CITIES = ["Bengaluru", "Pune", "Hyderabad", "NCR-Delhi", "Chennai"] as const;
+
 const heroSearchSchema = z.object({
-  city: z.string().min(2),
+  city: z.string().min(2, "Please select a city"),
   query: z.string().optional()
 });
 
 type HeroSearchValues = z.infer<typeof heroSearchSchema>;
 
 export function HeroSearchForm({
-  defaultCity,
   placeholder
 }: {
-  defaultCity: string;
+  defaultCity?: string;
   placeholder: string;
 }) {
   const router = useRouter();
   const form = useForm<HeroSearchValues>({
     resolver: zodResolver(heroSearchSchema),
     defaultValues: {
-      city: defaultCity,
+      city: "",
       query: ""
     }
   });
@@ -50,11 +51,16 @@ export function HeroSearchForm({
             <MapPinned size={14} />
             City
           </span>
-          <input
+          <select
             className="mt-3 w-full bg-transparent text-lg font-semibold text-ink outline-none"
-            placeholder="Bengaluru"
             {...form.register("city")}
-          />
+            defaultValue=""
+          >
+            <option value="" disabled>Select a city</option>
+            {SUPPORTED_CITIES.map((city) => (
+              <option key={city} value={city}>{city}</option>
+            ))}
+          </select>
         </label>
         <label className="soft-panel rounded-[1.5rem]">
           <span className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-ink/55">

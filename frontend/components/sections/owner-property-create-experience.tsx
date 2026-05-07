@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle, Crown, Home, MapPinned, ShieldCheck, Sparkles, Wallet, X } from "lucide-react";
@@ -94,14 +94,26 @@ export function OwnerPropertyCreateExperience() {
       propertyType: "Apartment",
       city: "Bengaluru",
       locality: "",
-      rent: 28000,
-      deposit: 84000,
+      rent: "" as unknown as number,
+      deposit: "" as unknown as number,
       bhk: "2BHK",
       furnishing: "Semi Furnished",
       amenities: "Lift, Security, Power Backup",
       photos: "https://images.example.com/owners/new-listing-cover.jpg"
     }
   });
+
+  // Auto-calc deposit as 6 × monthly rent (editable — user can override after).
+  // Tracks whether the deposit has been manually edited so we don't clobber user input.
+  const rentValue = form.watch("rent");
+  const [depositManuallyEdited, setDepositManuallyEdited] = useState(false);
+  useEffect(() => {
+    if (depositManuallyEdited) return;
+    const rentNum = Number(rentValue);
+    if (!isNaN(rentNum) && rentNum > 0) {
+      form.setValue("deposit", rentNum * 6, { shouldValidate: false });
+    }
+  }, [rentValue, depositManuallyEdited, form]);
 
   const createListingMutation = useMutation({
     mutationFn: (values: OwnerListingValues) => {
@@ -479,7 +491,16 @@ export function OwnerPropertyCreateExperience() {
                 </label>
                 <label className="field-label">
                   Deposit
-                  <input className="form-control mt-2" type="number" {...form.register("deposit")} />
+                  <input
+                    className="form-control mt-2"
+                    type="number"
+                    {...form.register("deposit", {
+                      onChange: () => setDepositManuallyEdited(true)
+                    })}
+                  />
+                  <span className="mt-1 block text-xs text-ink/52">
+                    Auto-set to 6 × monthly rent. You can override.
+                  </span>
                 </label>
                 <label className="field-label">
                   Furnishing

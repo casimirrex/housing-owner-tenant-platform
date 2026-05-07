@@ -7,6 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { Eye, EyeOff } from "lucide-react";
 import {
   registerWithEmail,
   registerWithPhone,
@@ -54,6 +55,8 @@ export function OwnerRegistrationExperience() {
   const [pageError, setPageError] = useState<string | null>(null);
   const [pageNotice, setPageNotice] = useState<string | null>(null);
   const [method, setMethod] = useState<"email" | "phone" | "google">("email");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const emailForm = useForm<EmailValues>({
     resolver: zodResolver(emailSchema),
@@ -319,24 +322,44 @@ export function OwnerRegistrationExperience() {
               </label>
               <label className="field-label">
                 Password
-                <input
-                  className="form-control mt-2"
-                  type="password"
-                  placeholder="At least 8 characters"
-                  {...emailForm.register("password")}
-                />
+                <div className="relative mt-2">
+                  <input
+                    className="form-control pr-10"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="At least 8 characters"
+                    {...emailForm.register("password")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/52 hover:text-ink"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
                 <span className="mt-2 block text-xs text-copper">
                   {emailForm.formState.errors.password?.message}
                 </span>
               </label>
               <label className="field-label">
                 Confirm password
-                <input
-                  className="form-control mt-2"
-                  type="password"
-                  placeholder="Re-enter your password"
-                  {...emailForm.register("confirmPassword")}
-                />
+                <div className="relative mt-2">
+                  <input
+                    className="form-control pr-10"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Re-enter your password"
+                    {...emailForm.register("confirmPassword")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/52 hover:text-ink"
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
                 <span className="mt-2 block text-xs text-copper">
                   {emailForm.formState.errors.confirmPassword?.message}
                 </span>

@@ -264,7 +264,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy text-[10px] font-bold uppercase tracking-widest text-oat">
                     RB
                   </div>
-                  <p className="font-serif text-xl font-semibold text-navy">Testition</p>
+                  <p className="font-serif text-xl font-semibold text-navy">Rent and Beyond</p>
                 </div>
                 <p className="mt-5 max-w-md font-serif text-2xl leading-snug text-ink md:text-[1.75rem]">
                   Trusted rentals for owners and tenants in one product.
