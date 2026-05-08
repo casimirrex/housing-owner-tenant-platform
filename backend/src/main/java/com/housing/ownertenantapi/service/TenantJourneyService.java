@@ -188,6 +188,14 @@ public class TenantJourneyService {
         date
     );
 
+    // Fallback: when there are no curated slots for this listing + date,
+    // expose a default set of viewing windows so the tenant can still book.
+    // The synthetic slot ids are recognized by fetchVisitSlot during the
+    // actual schedule call so the booking succeeds without seed rows.
+    if (slots.isEmpty()) {
+      slots = buildDefaultSlots();
+    }
+
     List<String> visitRules = jdbcTemplate.query("""
             SELECT rule_text
             FROM visit_rules
@@ -197,6 +205,31 @@ public class TenantJourneyService {
     );
 
     return new VisitSlotsResponse(slots, "Asia/Kolkata", visitRules);
+  }
+
+  private static final String DEFAULT_SLOT_PREFIX = "slot_default_";
+
+  private List<VisitSlotResponse> buildDefaultSlots() {
+    return List.of(
+        buildDefaultSlot("1000", "1030", "10:00 AM - 10:30 AM"),
+        buildDefaultSlot("1230", "1300", "12:30 PM - 1:00 PM"),
+        buildDefaultSlot("1430", "1500", "2:30 PM - 3:00 PM"),
+        buildDefaultSlot("1800", "1830", "6:00 PM - 6:30 PM")
+    );
+  }
+
+  private VisitSlotResponse buildDefaultSlot(String startCompact, String endCompact, String label) {
+    return new VisitSlotResponse(
+        DEFAULT_SLOT_PREFIX + startCompact,
+        label,
+        formatHHmm(startCompact),
+        formatHHmm(endCompact),
+        true
+    );
+  }
+
+  private String formatHHmm(String compact) {
+    return compact.substring(0, 2) + ":" + compact.substring(2, 4);
   }
 
   public VisitScheduleResponse scheduleVisit(String authorizationHeader, VisitScheduleRequest request) {
@@ -330,6 +363,16 @@ public class TenantJourneyService {
   }
 
   private VisitSlotResponse fetchVisitSlot(String propertyId, String slotId, String preferredDate) {
+    // Synthetic default slot ids (e.g. "slot_default_1000") are not stored in
+    // visit_slots — reconstruct the response from the embedded HHmm so the
+    // booking can proceed.
+    if (slotId != null && slotId.startsWith(DEFAULT_SLOT_PREFIX)) {
+      VisitSlotResponse synthetic = matchDefaultSlot(slotId);
+      if (synthetic != null) {
+        return synthetic;
+      }
+    }
+
     try {
       return jdbcTemplate.queryForObject("""
               SELECT slot_id, label, start_time, end_time, available
@@ -353,6 +396,15 @@ public class TenantJourneyService {
     } catch (EmptyResultDataAccessException exception) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown slot id " + slotId);
     }
+  }
+
+  private VisitSlotResponse matchDefaultSlot(String slotId) {
+    for (VisitSlotResponse slot : buildDefaultSlots()) {
+      if (slot.slotId().equals(slotId)) {
+        return slot;
+      }
+    }
+    return null;
   }
 
   private VisitPropertySummaryResponse fetchVisitPropertySummary(String propertyId) {
