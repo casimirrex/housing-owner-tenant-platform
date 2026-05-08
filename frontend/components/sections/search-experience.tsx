@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, MapPinned, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, LayoutGrid, MapPinned, SlidersHorizontal } from "lucide-react";
 import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ListingCard } from "@/components/ui/listing-card";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { SaveSearchButton } from "@/components/ui/save-search-button";
+import { SearchMapView } from "@/components/ui/search-map-view";
 import { getFilterMetadata, searchListings, searchMap } from "@/lib/api/client";
 import type { SearchMapRequest } from "@/lib/api/types";
 import { useSearchStore } from "@/store/search-store";
@@ -38,6 +39,8 @@ export function SearchExperience({
   const [draftQuery, setDraftQuery] = useState(initialQuery);
   const [draftBhk, setDraftBhk] = useState(initialBhk ?? "");
   const [draftBudgetMax, setDraftBudgetMax] = useState(initialBudgetMax?.toString() ?? "");
+  // Tier 3: List ↔ Map toggle
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
 
   useEffect(() => {
     setFilters({
@@ -229,9 +232,9 @@ export function SearchExperience({
         </aside>
 
         <div className="grid gap-6">
-          <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-            <div className="section-panel">
-              <div>
+          <section className="section-panel">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-copper">
                   Result summary
                 </p>
@@ -245,50 +248,56 @@ export function SearchExperience({
                 </p>
               </div>
 
-              <div className="mt-6 grid gap-3 md:grid-cols-2">
-                <div className="soft-panel">
-                  <p className="text-xs uppercase tracking-[0.22em] text-copper">Sort mode</p>
-                  <p className="mt-2 text-base font-semibold text-ink">
-                    {searchQuery.data?.summary.sortBy ?? "recommended"}
-                  </p>
-                </div>
-                <div className="soft-panel">
-                  <p className="text-xs uppercase tracking-[0.22em] text-copper">BHK options</p>
-                  <p className="mt-2 text-base font-semibold text-ink">
-                    {filtersQuery.data?.bhkOptions.join(", ") ?? "Loading..."}
-                  </p>
-                </div>
+              {/* Tier 3: List ↔ Map toggle */}
+              <div className="inline-flex items-center gap-1 rounded-full border border-black/8 bg-white p-1 shadow-soft">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("list")}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                    viewMode === "list" ? "bg-pine text-white" : "text-ink/60 hover:text-ink"
+                  }`}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  List
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("map")}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                    viewMode === "map" ? "bg-pine text-white" : "text-ink/60 hover:text-ink"
+                  }`}
+                >
+                  <MapPinned className="h-3.5 w-3.5" />
+                  Map ({mapQuery.data?.pins.length ?? 0})
+                </button>
               </div>
             </div>
 
-            <div className="dark-panel">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.22em] text-oat/60">Map view</p>
-                  <p className="mt-2 text-2xl font-semibold text-oat">
-                    {mapQuery.data?.pins.length ?? 0} pins, {mapQuery.data?.clusters.length ?? 0} clusters
-                  </p>
-                </div>
-                <MapPinned className="h-6 w-6 text-oat/72" />
+            <div className="mt-6 grid gap-3 md:grid-cols-2">
+              <div className="soft-panel">
+                <p className="text-xs uppercase tracking-[0.22em] text-copper">Sort mode</p>
+                <p className="mt-2 text-base font-semibold text-ink">
+                  {searchQuery.data?.summary.sortBy ?? "recommended"}
+                </p>
               </div>
-              <div className="mt-6 grid gap-3">
-                {mapQuery.data?.pins.slice(0, 4).map((pin) => (
-                  <div className="rounded-[24px] border border-white/10 bg-white/6 px-4 py-3" key={pin.listingId}>
-                    <p className="font-semibold text-oat">{pin.title}</p>
-                    <p className="mt-1 text-sm text-oat/68">
-                      {pin.locality} • Rs. {pin.rent.toLocaleString("en-IN")}
-                    </p>
-                  </div>
-                ))}
+              <div className="soft-panel">
+                <p className="text-xs uppercase tracking-[0.22em] text-copper">BHK options</p>
+                <p className="mt-2 text-base font-semibold text-ink">
+                  {filtersQuery.data?.bhkOptions.join(", ") ?? "Loading..."}
+                </p>
               </div>
             </div>
           </section>
 
-          <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {searchQuery.data?.items.map((listing) => (
-              <ListingCard key={listing.listingId} listing={listing} />
-            ))}
-          </section>
+          {viewMode === "map" ? (
+            <SearchMapView pins={mapQuery.data?.pins ?? []} city={city} />
+          ) : (
+            <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {searchQuery.data?.items.map((listing) => (
+                <ListingCard key={listing.listingId} listing={listing} />
+              ))}
+            </section>
+          )}
 
           <div className="section-panel flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
