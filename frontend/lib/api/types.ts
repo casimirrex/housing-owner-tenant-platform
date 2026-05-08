@@ -568,6 +568,34 @@ export interface SavedSearchResponse {
   totalAlerts: number;
 }
 
+export interface ChatThreadResponse {
+  threadId: string;
+  listingId: string;
+  listingTitle: string;
+  listingLocality: string;
+  listingCity: string;
+  counterpartyId: string;
+  counterpartyName: string;
+  myRole: "TENANT" | "OWNER";
+  lastMessagePreview: string | null;
+  lastMessageAt: string | null;
+  unreadCount: number;
+}
+
+export interface ChatMessage {
+  messageId: string;
+  senderId: string;
+  senderName: string;
+  fromMe: boolean;
+  content: string;
+  sentAt: string;
+  read: boolean;
+}
+
+export interface ChatMessagesResponse {
+  messages: ChatMessage[];
+}
+
 export interface SavedSearchAlertsResponse {
   alerts: Array<{
     alertId: string;

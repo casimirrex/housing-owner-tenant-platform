@@ -19,6 +19,8 @@ DROP TABLE IF EXISTS visits CASCADE;
 DROP TABLE IF EXISTS visit_rules CASCADE;
 DROP TABLE IF EXISTS visit_slots CASCADE;
 DROP TABLE IF EXISTS alerts CASCADE;
+DROP TABLE IF EXISTS chat_messages CASCADE;
+DROP TABLE IF EXISTS chat_threads CASCADE;
 DROP TABLE IF EXISTS saved_search_alerts CASCADE;
 DROP TABLE IF EXISTS saved_searches CASCADE;
 DROP TABLE IF EXISTS lead_requests CASCADE;
@@ -458,6 +460,38 @@ CREATE TABLE saved_search_alerts (
 
 CREATE INDEX idx_saved_search_alerts_user_status
   ON saved_search_alerts(user_id, status, created_at DESC);
+
+-- Tier 2 #6: In-app Chat (polling-based, not WebSocket).
+-- One thread per (listing, tenant, owner) tuple. Tenant initiates;
+-- owner replies. Messages are plain text (no attachments).
+CREATE TABLE chat_threads (
+  thread_id        VARCHAR(64) PRIMARY KEY,
+  listing_id       VARCHAR(64) NOT NULL REFERENCES listings(listing_id) ON DELETE CASCADE,
+  tenant_id        VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  owner_id         VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  last_message_at  TIMESTAMPTZ,
+  last_message_preview TEXT,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  -- One thread per (listing, tenant, owner). New visit to same listing reuses
+  -- the existing conversation rather than creating a parallel one.
+  CONSTRAINT uniq_thread_per_triple UNIQUE (listing_id, tenant_id, owner_id)
+);
+
+CREATE INDEX idx_chat_threads_tenant ON chat_threads(tenant_id, last_message_at DESC NULLS LAST);
+CREATE INDEX idx_chat_threads_owner  ON chat_threads(owner_id,  last_message_at DESC NULLS LAST);
+
+CREATE TABLE chat_messages (
+  message_id  VARCHAR(64) PRIMARY KEY,
+  thread_id   VARCHAR(64) NOT NULL REFERENCES chat_threads(thread_id) ON DELETE CASCADE,
+  sender_id   VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  content     TEXT NOT NULL,
+  sent_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  read_at     TIMESTAMPTZ,
+  CONSTRAINT chk_chat_content_length CHECK (char_length(content) BETWEEN 1 AND 1000)
+);
+
+CREATE INDEX idx_chat_messages_thread ON chat_messages(thread_id, sent_at ASC);
 
 -- Tier 1 #3: Pay-to-Contact / Express Interest leads.
 -- Tenant pays Rs 49 from their wallet to express interest in a listing.

@@ -31,6 +31,9 @@ import type {
   UserPasswordUpdateResponse,
   LeadContactResponse,
   ListingPromotionResponse,
+  ChatMessage,
+  ChatMessagesResponse,
+  ChatThreadResponse,
   OwnerAnalyticsResponse,
   OwnerLeadsResponse,
   OwnerVerificationResponse,
@@ -912,6 +915,61 @@ export function markAlertRead(alertId: string, accessToken?: string) {
 export function markAllAlertsRead(accessToken?: string) {
   return fetchJson<void>(
     "/api/v1/saved-searches/alerts/read-all",
+    { method: "POST" },
+    {},
+    accessToken
+  );
+}
+
+/* ── In-app Chat (Tier 2 #6) ──────────────────────────────────────────── */
+
+export function startChatThread(listingId: string, accessToken?: string) {
+  return fetchJson<ChatThreadResponse>(
+    "/api/v1/chat/threads",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingId })
+    },
+    {},
+    accessToken
+  );
+}
+
+export function listChatThreads(accessToken?: string) {
+  return fetchJson<ChatThreadResponse[]>(
+    "/api/v1/chat/threads",
+    undefined,
+    {},
+    accessToken
+  );
+}
+
+export function fetchChatMessages(threadId: string, accessToken?: string) {
+  return fetchJson<ChatMessagesResponse>(
+    `/api/v1/chat/threads/${encodeURIComponent(threadId)}/messages`,
+    undefined,
+    {},
+    accessToken
+  );
+}
+
+export function sendChatMessage(threadId: string, content: string, accessToken?: string) {
+  return fetchJson<ChatMessage>(
+    `/api/v1/chat/threads/${encodeURIComponent(threadId)}/messages`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content })
+    },
+    {},
+    accessToken
+  );
+}
+
+export function markThreadRead(threadId: string, accessToken?: string) {
+  return fetchJson<void>(
+    `/api/v1/chat/threads/${encodeURIComponent(threadId)}/read`,
     { method: "POST" },
     {},
     accessToken

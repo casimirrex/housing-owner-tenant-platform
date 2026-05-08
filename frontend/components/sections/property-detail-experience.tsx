@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -18,6 +19,7 @@ import {
 import { ExpressInterestModal } from "@/components/ui/express-interest-modal";
 import { ScheduleVisitModal } from "@/components/ui/schedule-visit-modal";
 import { AddToCompareButton } from "@/components/ui/add-to-compare-button";
+import { startChatThread } from "@/lib/api/client";
 import { ShortlistButton } from "@/components/ui/shortlist-button";
 import { SectionHeading } from "@/components/ui/section-heading";
 import {
@@ -52,12 +54,29 @@ export function PropertyDetailExperience({
   const accessToken = useAuthStore((state) => state.session?.accessToken);
   const sessionRole = useAuthStore((state) => state.session?.role ?? null);
   const queryClient = useQueryClient();
+  const router = useRouter();
   // Tier 1 #3 — Express Interest modal state
   const [expressInterestOpen, setExpressInterestOpen] = useState(false);
   const [interestSentMsg, setInterestSentMsg] = useState<string | null>(null);
   // Tier 2 #5 — Schedule Visit modal state
   const [scheduleVisitOpen, setScheduleVisitOpen] = useState(false);
   const [visitConfirmedMsg, setVisitConfirmedMsg] = useState<string | null>(null);
+  // Tier 2 #6 — Chat (open-or-reuse thread, then redirect to /messages)
+  const [chatOpening, setChatOpening] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+
+  const handleMessageOwner = async () => {
+    setChatOpening(true);
+    setChatError(null);
+    try {
+      const thread = await startChatThread(propertyId, accessToken);
+      router.push(`/messages?thread=${encodeURIComponent(thread.threadId)}`);
+    } catch (err) {
+      setChatError(err instanceof Error ? err.message : "Could not start chat. Please try again.");
+    } finally {
+      setChatOpening(false);
+    }
+  };
 
   const detailQuery = useQuery({
     queryKey: ["property-detail", propertyId, accessToken ?? "guest"],
@@ -498,27 +517,43 @@ export function PropertyDetailExperience({
               </h3>
               <p className="mt-2 text-sm text-ink/68">{detail.ownerInfo.badge}</p>
 
-              {/* Tier 1 #3 + Tier 2 #5 + Tier 2 #7 — tenant CTAs when full access is granted */}
+              {/* Tier 1 #3 + Tier 2 #5 + Tier 2 #6 + Tier 2 #7 — tenant CTAs when full access is granted */}
               {sessionRole === "TENANT" && fullAccess ? (
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setExpressInterestOpen(true)}
-                    className="inline-flex items-center gap-2 rounded-full bg-rose-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-rose-600"
-                  >
-                    <Heart className="h-4 w-4" />
-                    Express Interest (Rs 49)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setScheduleVisitOpen(true)}
-                    className="inline-flex items-center gap-2 rounded-full bg-pine px-5 py-2.5 text-sm font-semibold text-white hover:bg-pine/90"
-                  >
-                    <CalendarClock className="h-4 w-4" />
-                    Schedule a visit
-                  </button>
-                  <AddToCompareButton listingId={propertyId} variant="primary" />
-                </div>
+                <>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setExpressInterestOpen(true)}
+                      className="inline-flex items-center gap-2 rounded-full bg-rose-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-rose-600"
+                    >
+                      <Heart className="h-4 w-4" />
+                      Express Interest (Rs 49)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setScheduleVisitOpen(true)}
+                      className="inline-flex items-center gap-2 rounded-full bg-pine px-5 py-2.5 text-sm font-semibold text-white hover:bg-pine/90"
+                    >
+                      <CalendarClock className="h-4 w-4" />
+                      Schedule a visit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleMessageOwner}
+                      disabled={chatOpening}
+                      className="inline-flex items-center gap-2 rounded-full bg-navy px-5 py-2.5 text-sm font-semibold text-oat hover:bg-navy/90 disabled:opacity-60"
+                    >
+                      <MessageSquareMore className="h-4 w-4" />
+                      {chatOpening ? "Opening chat…" : "Message owner"}
+                    </button>
+                    <AddToCompareButton listingId={propertyId} variant="primary" />
+                  </div>
+                  {chatError ? (
+                    <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+                      {chatError}
+                    </p>
+                  ) : null}
+                </>
               ) : null}
 
               <div className="mt-6 grid gap-3">
