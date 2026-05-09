@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   BarChart3,
   Flag,
@@ -14,15 +14,35 @@ import { useAuthStore } from "@/store/auth-store";
 
 /**
  * /admin/* layout — gates the entire admin section behind the ADMIN role.
- * Non-admin sessions are redirected to /. We rely on backend re-checking
- * each endpoint for actual authorization; this is just a UX gate.
+ * Non-admin sessions are redirected to /. Backend re-checks every endpoint,
+ * so this is only a UX gate.
+ *
+ * Hydration: Zustand persist restores localStorage asynchronously after the
+ * first client render. We wait for the persist callback before deciding
+ * whether to redirect, otherwise a logged-in admin would briefly see no
+ * session and get bounced to /tenant/login.
  */
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const session = useAuthStore((state) => state.session);
+  const [hasHydrated, setHasHydrated] = useState<boolean>(
+    () => useAuthStore.persist.hasHydrated()
+  );
 
   useEffect(() => {
+    if (useAuthStore.persist.hasHydrated()) {
+      setHasHydrated(true);
+      return;
+    }
+    const unsub = useAuthStore.persist.onFinishHydration(() => setHasHydrated(true));
+    return () => {
+      unsub();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydrated) return;
     if (!session) {
       router.replace("/tenant/login?redirect=/admin");
       return;
@@ -30,9 +50,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     if (session.role !== "ADMIN") {
       router.replace("/");
     }
-  }, [session, router]);
+  }, [hasHydrated, session, router]);
 
-  if (!session || session.role !== "ADMIN") {
+  if (!hasHydrated || !session || session.role !== "ADMIN") {
     return (
       <main className="mx-auto flex min-h-[60vh] max-w-2xl items-center justify-center px-6 py-16 text-center">
         <p className="text-sm text-ink/60">Checking admin access…</p>
