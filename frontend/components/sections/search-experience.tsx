@@ -2,15 +2,27 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, LayoutGrid, MapPinned, SlidersHorizontal } from "lucide-react";
+import {
+  ArrowRight,
+  LayoutGrid,
+  Locate,
+  MapPinned,
+  SlidersHorizontal,
+  X
+} from "lucide-react";
 import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ListingCard } from "@/components/ui/listing-card";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { SaveSearchButton } from "@/components/ui/save-search-button";
 import { SearchMapView } from "@/components/ui/search-map-view";
-import { getFilterMetadata, searchListings, searchMap } from "@/lib/api/client";
-import type { SearchMapRequest } from "@/lib/api/types";
+import {
+  getFilterMetadata,
+  searchListings,
+  searchMap,
+  searchNearby
+} from "@/lib/api/client";
+import type { NearbyResponse, SearchMapPin, SearchMapRequest } from "@/lib/api/types";
 import { useSearchStore } from "@/store/search-store";
 
 const CITY_VIEWPORTS: Record<string, Omit<SearchMapRequest, "filters">> = {
@@ -41,6 +53,68 @@ export function SearchExperience({
   const [draftBudgetMax, setDraftBudgetMax] = useState(initialBudgetMax?.toString() ?? "");
   // Tier 3: List ↔ Map toggle
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
+
+  // "Near me" geolocation state
+  const [nearby, setNearby] = useState<NearbyResponse | null>(null);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [nearbyError, setNearbyError] = useState<string | null>(null);
+  const [nearbyRadius, setNearbyRadius] = useState(5);
+
+  const findNearMe = (radiusKm = nearbyRadius) => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      setNearbyError("Your browser does not support location access.");
+      return;
+    }
+    setNearbyError(null);
+    setNearbyLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const result = await searchNearby(
+            position.coords.latitude,
+            position.coords.longitude,
+            radiusKm
+          );
+          setNearby(result);
+          setNearbyRadius(radiusKm);
+          setViewMode("map");
+        } catch (error) {
+          setNearbyError(
+            error instanceof Error ? error.message : "Could not load nearby homes."
+          );
+        } finally {
+          setNearbyLoading(false);
+        }
+      },
+      (geoError) => {
+        setNearbyLoading(false);
+        const message =
+          geoError.code === geoError.PERMISSION_DENIED
+            ? "Location permission denied. Allow location in your browser to use Near me."
+            : geoError.code === geoError.POSITION_UNAVAILABLE
+              ? "Could not determine your location. Try again outdoors or with Wi-Fi on."
+              : "Locating timed out. Please try again.";
+        setNearbyError(message);
+      },
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 60_000 }
+    );
+  };
+
+  const clearNearMe = () => {
+    setNearby(null);
+    setNearbyError(null);
+  };
+
+  const nearbyPins: SearchMapPin[] =
+    nearby?.items.map((item) => ({
+      listingId: item.listingId,
+      title: item.title,
+      locality: item.locality,
+      lat: item.lat,
+      lng: item.lng,
+      rent: item.rent,
+      verified: item.verified
+    })) ?? [];
 
   useEffect(() => {
     setFilters({
@@ -147,6 +221,18 @@ export function SearchExperience({
                 {filter}
               </span>
             ))}
+            {nearby ? (
+              <button
+                onClick={clearNearMe}
+                type="button"
+                className="meta-pill inline-flex items-center gap-1.5 bg-pine text-white hover:bg-pine/90"
+                title="Clear Near me"
+              >
+                <Locate className="h-3.5 w-3.5" />
+                Near me · within {nearby.radiusKm} km
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
             <SaveSearchButton
               city={city}
               query={query}
@@ -214,6 +300,55 @@ export function SearchExperience({
             >
               Apply filters
             </button>
+          </div>
+
+          <div className="surface-divider mt-6" />
+
+          <div className="mt-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-copper">
+              Find homes near you
+            </p>
+            <p className="mt-2 text-xs leading-5 text-ink/60">
+              We use your device location to surface listings ranked by distance.
+            </p>
+            <label className="field-label mt-4 block">
+              Search radius
+              <select
+                className="form-control mt-2"
+                value={nearbyRadius}
+                onChange={(event) => setNearbyRadius(Number(event.target.value))}
+              >
+                <option value={1}>Within 1 km</option>
+                <option value={3}>Within 3 km</option>
+                <option value={5}>Within 5 km</option>
+                <option value={10}>Within 10 km</option>
+                <option value={20}>Within 20 km</option>
+              </select>
+            </label>
+            <button
+              className="button-secondary mt-3 w-full justify-center"
+              onClick={() => findNearMe(nearbyRadius)}
+              disabled={nearbyLoading}
+              type="button"
+            >
+              <Locate className="mr-2 h-4 w-4" />
+              {nearbyLoading ? "Locating…" : "Use my location"}
+            </button>
+            {nearbyError ? (
+              <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                {nearbyError}
+              </p>
+            ) : null}
+            {nearby ? (
+              <button
+                className="button-ghost mt-3 w-full justify-center"
+                onClick={clearNearMe}
+                type="button"
+              >
+                <X className="mr-2 h-4 w-4" />
+                Clear "Near me"
+              </button>
+            ) : null}
           </div>
 
           <div className="surface-divider mt-6" />
@@ -289,7 +424,46 @@ export function SearchExperience({
             </div>
           </section>
 
-          {viewMode === "map" ? (
+          {nearby ? (
+            <>
+              <div className="rounded-2xl border border-pine/20 bg-pine/5 px-4 py-3 text-sm text-ink/75">
+                Showing <strong>{nearby.items.length}</strong> homes within{" "}
+                <strong>{nearby.radiusKm} km</strong> of your location, sorted by distance.
+                {nearby.items.length === 0
+                  ? " No homes nearby — try a wider radius."
+                  : null}
+              </div>
+              {viewMode === "map" ? (
+                <SearchMapView pins={nearbyPins} city={city} />
+              ) : (
+                <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                  {nearby.items.map((item) => (
+                    <div className="relative" key={item.listingId}>
+                      <span className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-pine px-2.5 py-1 text-xs font-bold text-white shadow-soft">
+                        <Locate className="h-3 w-3" />
+                        {item.distanceKm.toFixed(1)} km
+                      </span>
+                      <ListingCard
+                        listing={{
+                          listingId: item.listingId,
+                          title: item.title,
+                          locality: item.locality,
+                          city: item.city,
+                          rent: item.rent,
+                          bhk: item.bhk,
+                          verified: item.verified,
+                          premium: item.premium,
+                          featured: item.featured,
+                          postedLabel: item.postedLabel,
+                          urgencyLabel: item.urgencyLabel
+                        }}
+                      />
+                    </div>
+                  ))}
+                </section>
+              )}
+            </>
+          ) : viewMode === "map" ? (
             <SearchMapView pins={mapQuery.data?.pins ?? []} city={city} />
           ) : (
             <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">

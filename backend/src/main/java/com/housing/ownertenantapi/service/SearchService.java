@@ -5,6 +5,7 @@ import com.housing.ownertenantapi.dto.FilterMetadataResponse;
 import com.housing.ownertenantapi.dto.ListingSummaryResponse;
 import com.housing.ownertenantapi.dto.LocationAutocompleteResponse;
 import com.housing.ownertenantapi.dto.LocationSuggestionResponse;
+import com.housing.ownertenantapi.dto.NearbyListingResponse;
 import com.housing.ownertenantapi.dto.NearbyResponse;
 import com.housing.ownertenantapi.dto.PaginationResponse;
 import com.housing.ownertenantapi.dto.SearchAppliedFiltersResponse;
@@ -256,19 +257,31 @@ public class SearchService {
   public NearbyResponse getNearby(Double lat, Double lng, Double radiusKm) {
     double centerLat = lat != null ? lat : 12.9716;
     double centerLng = lng != null ? lng : 77.5946;
-    double resolvedRadius = radiusKm != null && radiusKm > 0 ? radiusKm : 5.0;
+    double resolvedRadius = radiusKm != null && radiusKm > 0 ? Math.min(radiusKm, 50.0) : 5.0;
 
-    List<ListingSummaryResponse> items = jdbcTemplate.query("""
+    // Haversine formula in SQL: 2 * R * asin(sqrt(...)). R = 6371 km (Earth radius).
+    // Each lat/lng parameter is bound twice — once for SELECT, once for WHERE.
+    List<NearbyListingResponse> items = jdbcTemplate.query("""
             SELECT listing_id, title, locality, city, rent, bhk, verified, premium,
                    (featured_until IS NOT NULL AND featured_until > now()) AS featured,
-                   posted_label, urgency_label,
-                   SQRT(POWER(lat - ?, 2) + POWER(lng - ?, 2)) * 111 AS distance_km
+                   posted_label, urgency_label, lat, lng,
+                   2 * 6371 * asin(sqrt(
+                     power(sin(radians((lat - ?) / 2)), 2) +
+                     cos(radians(?)) * cos(radians(lat)) *
+                     power(sin(radians((lng - ?) / 2)), 2)
+                   )) AS distance_km
             FROM listings
             WHERE status = 'PUBLISHED'
-              AND SQRT(POWER(lat - ?, 2) + POWER(lng - ?, 2)) * 111 <= ?
+              AND lat IS NOT NULL AND lng IS NOT NULL
+              AND 2 * 6371 * asin(sqrt(
+                    power(sin(radians((lat - ?) / 2)), 2) +
+                    cos(radians(?)) * cos(radians(lat)) *
+                    power(sin(radians((lng - ?) / 2)), 2)
+                  )) <= ?
             ORDER BY distance_km ASC
+            LIMIT 60
             """,
-        (rs, rowNum) -> new ListingSummaryResponse(
+        (rs, rowNum) -> new NearbyListingResponse(
             rs.getString("listing_id"),
             rs.getString("title"),
             rs.getString("locality"),
@@ -279,12 +292,15 @@ public class SearchService {
             rs.getBoolean("premium"),
             rs.getBoolean("featured"),
             rs.getString("posted_label"),
-            rs.getString("urgency_label")
+            rs.getString("urgency_label"),
+            rs.getDouble("lat"),
+            rs.getDouble("lng"),
+            Math.round(rs.getDouble("distance_km") * 100.0) / 100.0
         ),
-        centerLat,
-        centerLng,
-        centerLat,
-        centerLng,
+        // SELECT-clause Haversine inputs
+        centerLat, centerLat, centerLng,
+        // WHERE-clause Haversine inputs
+        centerLat, centerLat, centerLng,
         resolvedRadius
     );
 

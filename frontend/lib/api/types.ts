@@ -173,6 +173,34 @@ export interface SearchMapResponse {
   clusters: SearchMapCluster[];
 }
 
+export interface NearbyListing {
+  listingId: string;
+  title: string;
+  locality: string;
+  city: string;
+  rent: number;
+  bhk: string;
+  verified: boolean;
+  premium: boolean;
+  featured: boolean;
+  postedLabel: string;
+  urgencyLabel: string;
+  lat: number;
+  lng: number;
+  distanceKm: number;
+}
+
+export interface NearbyCenterPoint {
+  lat: number;
+  lng: number;
+}
+
+export interface NearbyResponse {
+  items: NearbyListing[];
+  centerPoint: NearbyCenterPoint;
+  radiusKm: number;
+}
+
 export interface FilterMetadataResponse {
   budgetRanges: string[];
   bhkOptions: string[];

@@ -6,6 +6,7 @@ import type {
   ListingCollectionResponse,
   MatchesResponse,
   LogoutResponse,
+  NearbyResponse,
   OwnerListingsResponse,
   OwnerGetStartedResponse,
   OwnerCreatePaymentRecordRequest,
@@ -208,6 +209,14 @@ export function searchMap(request: SearchMapRequest) {
       body: JSON.stringify(request)
     }
   );
+}
+
+export function searchNearby(lat: number, lng: number, radiusKm = 5) {
+  return fetchJson<NearbyResponse>("/api/v1/locations/nearby", undefined, {
+    lat,
+    lng,
+    radiusKm
+  });
 }
 
 export function getFilterMetadata(city: string) {
