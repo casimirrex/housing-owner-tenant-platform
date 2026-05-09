@@ -346,7 +346,7 @@ export function SearchExperience({
                 type="button"
               >
                 <X className="mr-2 h-4 w-4" />
-                Clear "Near me"
+                Clear &ldquo;Near me&rdquo;
               </button>
             ) : null}
           </div>

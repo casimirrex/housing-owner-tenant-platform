@@ -17,32 +17,24 @@ import { useAuthStore } from "@/store/auth-store";
  * Non-admin sessions are redirected to /. Backend re-checks every endpoint,
  * so this is only a UX gate.
  *
- * Hydration: Zustand persist restores localStorage asynchronously after the
- * first client render. We wait for the persist callback before deciding
- * whether to redirect, otherwise a logged-in admin would briefly see no
- * session and get bounced to /tenant/login.
+ * Why the `mounted` flag: Zustand persist restores localStorage on the client
+ * only. During SSR / static prerender there is no localStorage, so `session`
+ * is null. If we redirected immediately we would briefly bounce a logged-in
+ * admin to /tenant/login. We render a loading shell until the first client
+ * effect fires, by which point persist has rehydrated.
  */
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const session = useAuthStore((state) => state.session);
-  const [hasHydrated, setHasHydrated] = useState<boolean>(
-    () => useAuthStore.persist.hasHydrated()
-  );
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (useAuthStore.persist.hasHydrated()) {
-      setHasHydrated(true);
-      return;
-    }
-    const unsub = useAuthStore.persist.onFinishHydration(() => setHasHydrated(true));
-    return () => {
-      unsub();
-    };
+    setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!hasHydrated) return;
+    if (!mounted) return;
     if (!session) {
       router.replace("/tenant/login?redirect=/admin");
       return;
@@ -50,9 +42,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     if (session.role !== "ADMIN") {
       router.replace("/");
     }
-  }, [hasHydrated, session, router]);
+  }, [mounted, session, router]);
 
-  if (!hasHydrated || !session || session.role !== "ADMIN") {
+  if (!mounted || !session || session.role !== "ADMIN") {
     return (
       <main className="mx-auto flex min-h-[60vh] max-w-2xl items-center justify-center px-6 py-16 text-center">
         <p className="text-sm text-ink/60">Checking admin access…</p>
