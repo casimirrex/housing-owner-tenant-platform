@@ -16,9 +16,19 @@ import type {
   MatchesResponse,
   LogoutResponse,
   NearbyResponse,
+  ListingTemplateCreateBody,
+  ListingTemplateItem,
+  ListingTemplateListResponse,
+  MaintenanceListResponse,
+  MaintenanceRequestCreateBody,
+  MaintenanceRequestItem,
+  MaintenanceUpdateStatusBody,
   ReviewEligibilityResponse,
   ReviewSubmitRequestBody,
   ReviewSubmittedResponse,
+  RoommateMatchesResponse,
+  RoommateProfile,
+  RoommateProfileRequestBody,
   UserBlock,
   UserBlockListResponse,
   UserBlockRequestBody,
@@ -384,6 +394,130 @@ export function adminActOnReport(
       body: JSON.stringify(body)
     },
     {},
+    accessToken
+  );
+}
+
+/* ── Tier 2: Maintenance ─────────────────────────────────────────────── */
+
+export function createMaintenanceRequest(
+  body: MaintenanceRequestCreateBody,
+  accessToken?: string
+) {
+  return fetchJson<MaintenanceRequestItem>(
+    "/api/v1/maintenance/requests",
+    { method: "POST", body: JSON.stringify(body) },
+    {},
+    accessToken
+  );
+}
+
+export function listTenantMaintenance(
+  query: { status?: string; page?: number; pageSize?: number },
+  accessToken?: string
+) {
+  return fetchJson<MaintenanceListResponse>(
+    "/api/v1/maintenance/requests/tenant",
+    undefined,
+    { status: query.status, page: query.page ?? 0, pageSize: query.pageSize ?? 20 },
+    accessToken
+  );
+}
+
+export function listOwnerMaintenance(
+  query: { status?: string; page?: number; pageSize?: number },
+  accessToken?: string
+) {
+  return fetchJson<MaintenanceListResponse>(
+    "/api/v1/maintenance/requests/owner",
+    undefined,
+    { status: query.status, page: query.page ?? 0, pageSize: query.pageSize ?? 20 },
+    accessToken
+  );
+}
+
+export function updateMaintenanceStatus(
+  requestId: string,
+  body: MaintenanceUpdateStatusBody,
+  accessToken?: string
+) {
+  return fetchJson<MaintenanceRequestItem>(
+    `/api/v1/maintenance/requests/${requestId}/status`,
+    { method: "PATCH", body: JSON.stringify(body) },
+    {},
+    accessToken
+  );
+}
+
+export function cancelMaintenanceRequest(requestId: string, accessToken?: string) {
+  return fetchJson<void>(
+    `/api/v1/maintenance/requests/${requestId}`,
+    { method: "DELETE" },
+    {},
+    accessToken
+  );
+}
+
+/* ── Tier 2: Listing templates ───────────────────────────────────────── */
+
+export function listListingTemplates(accessToken?: string) {
+  return fetchJson<ListingTemplateListResponse>(
+    "/api/v1/owners/listing-templates",
+    undefined,
+    {},
+    accessToken
+  );
+}
+
+export function createListingTemplate(
+  body: ListingTemplateCreateBody,
+  accessToken?: string
+) {
+  return fetchJson<ListingTemplateItem>(
+    "/api/v1/owners/listing-templates",
+    { method: "POST", body: JSON.stringify(body) },
+    {},
+    accessToken
+  );
+}
+
+export function deleteListingTemplate(templateId: string, accessToken?: string) {
+  return fetchJson<void>(
+    `/api/v1/owners/listing-templates/${templateId}`,
+    { method: "DELETE" },
+    {},
+    accessToken
+  );
+}
+
+/* ── Tier 2: Roommates ───────────────────────────────────────────────── */
+
+export function getMyRoommateProfile(accessToken?: string) {
+  return fetchJson<RoommateProfile>(
+    "/api/v1/roommates/profile/me",
+    undefined,
+    {},
+    accessToken
+  );
+}
+
+export function upsertRoommateProfile(
+  body: RoommateProfileRequestBody,
+  accessToken?: string
+) {
+  return fetchJson<RoommateProfile>(
+    "/api/v1/roommates/profile/me",
+    { method: "PUT", body: JSON.stringify(body) },
+    {},
+    accessToken
+  );
+}
+
+export function findRoommateMatches(limit = 20, accessToken?: string) {
+  return fetchJson<RoommateMatchesResponse>(
+    "/api/v1/roommates/matches",
+    undefined,
+    { limit },
     accessToken
   );
 }
@@ -1139,13 +1273,18 @@ export function fetchChatMessages(threadId: string, accessToken?: string) {
   );
 }
 
-export function sendChatMessage(threadId: string, content: string, accessToken?: string) {
+export function sendChatMessage(
+  threadId: string,
+  content: string,
+  accessToken?: string,
+  imageUrl?: string
+) {
   return fetchJson<ChatMessage>(
     `/api/v1/chat/threads/${encodeURIComponent(threadId)}/messages`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content })
+      body: JSON.stringify({ content, imageUrl })
     },
     {},
     accessToken

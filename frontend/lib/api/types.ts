@@ -354,6 +354,116 @@ export type AdminListingStatus =
   | "ARCHIVED"
   | "SUSPENDED";
 
+/* ── Tier 2: maintenance, templates, roommates, chat images ───────────── */
+
+export type MaintenanceCategory =
+  | "PLUMBING" | "ELECTRICAL" | "APPLIANCE" | "PAINTING"
+  | "PEST_CONTROL" | "CLEANING" | "CARPENTRY" | "OTHER";
+
+export type MaintenancePriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
+
+export type MaintenanceStatus =
+  | "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED" | "CANCELLED";
+
+export interface MaintenanceRequestCreateBody {
+  listingId: string;
+  category: MaintenanceCategory;
+  priority?: MaintenancePriority;
+  title: string;
+  description: string;
+}
+
+export interface MaintenanceRequestItem {
+  requestId: string;
+  listingId: string;
+  listingTitle: string;
+  tenantId: string;
+  tenantName: string;
+  ownerId: string;
+  ownerName: string;
+  category: MaintenanceCategory;
+  priority: MaintenancePriority;
+  title: string;
+  description: string;
+  status: MaintenanceStatus;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string | null;
+  ownerNote: string | null;
+}
+
+export interface MaintenanceListResponse {
+  items: MaintenanceRequestItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface MaintenanceUpdateStatusBody {
+  status: MaintenanceStatus;
+  ownerNote?: string;
+}
+
+export interface ListingTemplateCreateBody {
+  name: string;
+  payloadJson: string;
+}
+
+export interface ListingTemplateItem {
+  templateId: string;
+  ownerId: string;
+  name: string;
+  payloadJson: string;
+  createdAt: string;
+}
+
+export interface ListingTemplateListResponse {
+  items: ListingTemplateItem[];
+  totalCount: number;
+}
+
+export interface RoommateProfileRequestBody {
+  city: string;
+  preferredAreas?: string;
+  budgetMin?: number;
+  budgetMax?: number;
+  moveInDate?: string;
+  genderPreference?: "ANY" | "MALE" | "FEMALE" | "NON_BINARY";
+  occupation?: string;
+  smoker: boolean;
+  drinks: boolean;
+  petFriendly: boolean;
+  vegetarian: boolean;
+  earlyRiser: boolean;
+  bio?: string;
+}
+
+export interface RoommateProfile {
+  profileId: string;
+  userId: string;
+  fullName: string;
+  city: string;
+  preferredAreas: string | null;
+  budgetMin: number | null;
+  budgetMax: number | null;
+  moveInDate: string | null;
+  genderPreference: string;
+  occupation: string | null;
+  smoker: boolean;
+  drinks: boolean;
+  petFriendly: boolean;
+  vegetarian: boolean;
+  earlyRiser: boolean;
+  bio: string | null;
+  active: boolean;
+  matchScore: number | null;
+}
+
+export interface RoommateMatchesResponse {
+  items: RoommateProfile[];
+  totalCount: number;
+}
+
 export interface FilterMetadataResponse {
   budgetRanges: string[];
   bhkOptions: string[];
@@ -773,6 +883,8 @@ export interface ChatMessage {
   content: string;
   sentAt: string;
   read: boolean;
+  /** Tier 2: optional image attachment URL */
+  imageUrl?: string | null;
 }
 
 export interface ChatMessagesResponse {

@@ -1,3 +1,6 @@
+DROP TABLE IF EXISTS roommate_profiles CASCADE;
+DROP TABLE IF EXISTS listing_templates CASCADE;
+DROP TABLE IF EXISTS maintenance_requests CASCADE;
 DROP TABLE IF EXISTS owner_reviews CASCADE;
 DROP TABLE IF EXISTS locality_aliases CASCADE;
 DROP TABLE IF EXISTS user_blocks CASCADE;
@@ -495,12 +498,16 @@ CREATE TABLE chat_messages (
   thread_id   VARCHAR(64) NOT NULL REFERENCES chat_threads(thread_id) ON DELETE CASCADE,
   sender_id   VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   content     TEXT NOT NULL,
+  -- Tier 2: optional image attachment URL on a chat message.
+  image_url   TEXT,
   sent_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   read_at     TIMESTAMPTZ,
   CONSTRAINT chk_chat_content_length CHECK (char_length(content) BETWEEN 1 AND 1000)
 );
 
 CREATE INDEX idx_chat_messages_thread ON chat_messages(thread_id, sent_at ASC);
+CREATE INDEX idx_chat_messages_unread
+  ON chat_messages(thread_id, sender_id) WHERE read_at IS NULL;
 
 -- Tier 1 #3: Pay-to-Contact / Express Interest leads.
 -- Tenant pays Rs 49 from their wallet to express interest in a listing.
@@ -952,3 +959,60 @@ CREATE INDEX idx_locality_aliases_canonical ON locality_aliases(canonical);
 
 -- Fraud score index: only listings with score > 0 are interesting.
 CREATE INDEX idx_listings_fraud ON listings(fraud_score DESC) WHERE fraud_score > 0;
+
+-- ─── Tier 2: maintenance, templates, roommates ──────────────────────────
+
+CREATE TABLE maintenance_requests (
+  request_id    VARCHAR(64) PRIMARY KEY,
+  listing_id    VARCHAR(64) NOT NULL REFERENCES listings(listing_id) ON DELETE CASCADE,
+  tenant_id     VARCHAR(64) NOT NULL REFERENCES users(user_id)       ON DELETE CASCADE,
+  owner_id      VARCHAR(64) NOT NULL REFERENCES users(user_id)       ON DELETE CASCADE,
+  category      TEXT NOT NULL CHECK (category IN (
+                  'PLUMBING','ELECTRICAL','APPLIANCE','PAINTING','PEST_CONTROL',
+                  'CLEANING','CARPENTRY','OTHER')),
+  priority      TEXT NOT NULL DEFAULT 'NORMAL'
+                 CHECK (priority IN ('LOW','NORMAL','HIGH','URGENT')),
+  title         TEXT NOT NULL,
+  description   TEXT NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'OPEN'
+                 CHECK (status IN ('OPEN','IN_PROGRESS','RESOLVED','CLOSED','CANCELLED')),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  resolved_at   TIMESTAMPTZ,
+  owner_note    TEXT
+);
+CREATE INDEX idx_maintenance_tenant ON maintenance_requests(tenant_id, created_at DESC);
+CREATE INDEX idx_maintenance_owner  ON maintenance_requests(owner_id, status, created_at DESC);
+CREATE INDEX idx_maintenance_listing ON maintenance_requests(listing_id, created_at DESC);
+
+CREATE TABLE listing_templates (
+  template_id   VARCHAR(64) PRIMARY KEY,
+  owner_id      VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  name          TEXT NOT NULL,
+  payload_json  TEXT NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_listing_templates_owner ON listing_templates(owner_id, created_at DESC);
+
+CREATE TABLE roommate_profiles (
+  profile_id        VARCHAR(64) PRIMARY KEY,
+  user_id           VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  city              TEXT NOT NULL,
+  preferred_areas   TEXT,
+  budget_min        INTEGER,
+  budget_max        INTEGER,
+  move_in_date      DATE,
+  gender_preference TEXT CHECK (gender_preference IN ('ANY','MALE','FEMALE','NON_BINARY')),
+  occupation        TEXT,
+  smoker            BOOLEAN NOT NULL DEFAULT FALSE,
+  drinks            BOOLEAN NOT NULL DEFAULT FALSE,
+  pet_friendly      BOOLEAN NOT NULL DEFAULT FALSE,
+  vegetarian        BOOLEAN NOT NULL DEFAULT FALSE,
+  early_riser       BOOLEAN NOT NULL DEFAULT FALSE,
+  bio               TEXT,
+  active            BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT uniq_roommate_profile_per_user UNIQUE (user_id)
+);
+CREATE INDEX idx_roommate_profiles_city ON roommate_profiles(city, active);

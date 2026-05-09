@@ -21,6 +21,7 @@ import { ScheduleVisitModal } from "@/components/ui/schedule-visit-modal";
 import { AddToCompareButton } from "@/components/ui/add-to-compare-button";
 import { ReportListingButton } from "@/components/ui/report-listing-button";
 import { LeaveReviewButton } from "@/components/ui/leave-review-button";
+import { PhotoCarousel } from "@/components/ui/photo-carousel";
 import { startChatThread } from "@/lib/api/client";
 import { ShortlistButton } from "@/components/ui/shortlist-button";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -208,19 +209,25 @@ export function PropertyDetailExperience({
 
           <div className="relative z-10 mt-8 grid gap-4 md:grid-cols-[1.15fr_0.85fr]">
             <div className="rounded-[30px] border border-white/12 bg-white/8 p-6 backdrop-blur">
-              <p className="text-xs uppercase tracking-[0.22em] text-oat/56">Gallery preview</p>
-              <div className="mt-5 grid min-h-[220px] gap-4 md:grid-cols-[1.35fr_0.65fr]">
-                <div className="rounded-[28px] bg-gradient-to-br from-white/20 via-white/8 to-transparent p-5">
-                  <p className="text-sm font-semibold text-oat">
-                    {fullAccess ? "Primary room view" : "Preview image"}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-oat/68">
-                    {fullAccess
-                      ? `${detail.property.imageUrls.length} images available in the property gallery.`
-                      : "Premium tenants unlock the full gallery, detailed room views, and listing walkthrough content."}
-                  </p>
-                </div>
-                <div className="grid gap-4">
+              <p className="text-xs uppercase tracking-[0.22em] text-oat/56">
+                {fullAccess ? "Property gallery" : "Gallery preview"}
+              </p>
+              <div className="mt-5">
+                {fullAccess ? (
+                  <PhotoCarousel
+                    imageUrls={detail.property.imageUrls}
+                    alt={detail.property.title}
+                  />
+                ) : (
+                  <div className="rounded-[28px] bg-gradient-to-br from-white/20 via-white/8 to-transparent p-5">
+                    <p className="text-sm font-semibold text-oat">Preview image</p>
+                    <p className="mt-2 text-sm leading-6 text-oat/68">
+                      Premium tenants unlock the full gallery, detailed room views, and listing
+                      walkthrough content.
+                    </p>
+                  </div>
+                )}
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
                   <div className="rounded-[24px] bg-white/10 p-4 text-sm text-oat/74">
                     {detail.specs.furnishing}
                   </div>

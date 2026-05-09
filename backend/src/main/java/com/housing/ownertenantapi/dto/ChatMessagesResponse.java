@@ -29,6 +29,10 @@ public record ChatMessagesResponse(
       String sentAt,
 
       @Schema(description = "Has the recipient read this message", example = "true")
-      boolean read
+      boolean read,
+
+      @Schema(description = "Optional image attachment URL", example = "/uploads/chat/abc.jpg",
+          nullable = true)
+      String imageUrl
   ) {}
 }

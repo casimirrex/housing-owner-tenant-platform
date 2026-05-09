@@ -9,6 +9,8 @@ import com.housing.ownertenantapi.dto.AdminStatsResponse;
 import com.housing.ownertenantapi.dto.AdminUsersResponse;
 import com.housing.ownertenantapi.service.AdminService;
 import com.housing.ownertenantapi.service.CurrentSessionService;
+import com.housing.ownertenantapi.service.StaleListingArchiver;
+import java.util.Map;
 import com.housing.ownertenantapi.service.CurrentSessionService.SessionIdentity;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -38,10 +41,16 @@ public class AdminController {
 
   private final AdminService adminService;
   private final CurrentSessionService currentSessionService;
+  private final StaleListingArchiver staleListingArchiver;
 
-  public AdminController(AdminService adminService, CurrentSessionService currentSessionService) {
+  public AdminController(
+      AdminService adminService,
+      CurrentSessionService currentSessionService,
+      StaleListingArchiver staleListingArchiver
+  ) {
     this.adminService = adminService;
     this.currentSessionService = currentSessionService;
+    this.staleListingArchiver = staleListingArchiver;
   }
 
   @GetMapping("/stats")
@@ -112,6 +121,16 @@ public class AdminController {
   ) {
     SessionIdentity admin = requireAdmin(authorizationHeader);
     return adminService.actOnReport(reportId, admin.userId(), request);
+  }
+
+  @PostMapping("/maintenance/sweep-stale-listings")
+  @Operation(summary = "Manually trigger the stale-listing auto-archive sweep")
+  public Map<String, Object> sweepStaleListings(
+      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader
+  ) {
+    requireAdmin(authorizationHeader);
+    int affected = staleListingArchiver.sweep();
+    return Map.of("archivedCount", affected);
   }
 
   private SessionIdentity requireAdmin(String authorizationHeader) {

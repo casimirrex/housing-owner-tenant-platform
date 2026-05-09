@@ -143,7 +143,7 @@ public class ChatService {
 
     List<Message> messages = jdbcClient.sql("""
             SELECT m.message_id, m.sender_id, u.full_name AS sender_name,
-                   m.content, m.sent_at, m.read_at
+                   m.content, m.sent_at, m.read_at, m.image_url
             FROM chat_messages m
             JOIN users u ON u.user_id = m.sender_id
             WHERE m.thread_id = :threadId
@@ -161,7 +161,8 @@ public class ChatService {
               senderId.equals(userId),
               rs.getString("content"),
               ISO.format(rs.getObject("sent_at", OffsetDateTime.class)),
-              readAt != null
+              readAt != null,
+              rs.getString("image_url")
           );
         })
         .list();
@@ -173,10 +174,22 @@ public class ChatService {
 
   @Transactional
   public ChatMessagesResponse.Message sendMessage(String senderId, String threadId, String content) {
-    if (content == null || content.isBlank()) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Message cannot be empty.");
+    return sendMessage(senderId, threadId, content, null);
+  }
+
+  @Transactional
+  public ChatMessagesResponse.Message sendMessage(
+      String senderId, String threadId, String content, String imageUrl
+  ) {
+    boolean hasImage = imageUrl != null && !imageUrl.isBlank();
+    if ((content == null || content.isBlank()) && !hasImage) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+          "Provide message text or an image attachment.");
     }
-    String trimmed = content.trim();
+    // Image-only messages still need a placeholder content because the column is NOT NULL.
+    String trimmed = (content == null || content.isBlank())
+        ? "[image]"
+        : content.trim();
     if (trimmed.length() > 1000) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
           "Message exceeds 1000 characters.");
@@ -187,19 +200,21 @@ public class ChatService {
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.SECONDS);
 
     jdbcClient.sql("""
-            INSERT INTO chat_messages (message_id, thread_id, sender_id, content, sent_at)
-            VALUES (:messageId, :threadId, :senderId, :content, :sentAt)
+            INSERT INTO chat_messages (message_id, thread_id, sender_id, content, image_url, sent_at)
+            VALUES (:messageId, :threadId, :senderId, :content, :imageUrl, :sentAt)
             """)
         .param("messageId", messageId)
         .param("threadId", threadId)
         .param("senderId", senderId)
         .param("content", trimmed)
+        .param("imageUrl", hasImage ? imageUrl : null)
         .param("sentAt", now)
         .update();
 
-    String preview = trimmed.length() > PREVIEW_MAX_CHARS
-        ? trimmed.substring(0, PREVIEW_MAX_CHARS - 1) + "…"
-        : trimmed;
+    String previewSource = hasImage && trimmed.equals("[image]") ? "📷 Photo" : trimmed;
+    String preview = previewSource.length() > PREVIEW_MAX_CHARS
+        ? previewSource.substring(0, PREVIEW_MAX_CHARS - 1) + "…"
+        : previewSource;
     jdbcClient.sql("""
             UPDATE chat_threads
             SET last_message_at = :now,
@@ -219,7 +234,8 @@ public class ChatService {
         .orElse("Unknown");
 
     return new ChatMessagesResponse.Message(
-        messageId, senderId, senderName, true, trimmed, ISO.format(now), false
+        messageId, senderId, senderName, true, trimmed, ISO.format(now), false,
+        hasImage ? imageUrl : null
     );
   }
 

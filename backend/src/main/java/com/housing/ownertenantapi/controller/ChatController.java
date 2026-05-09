@@ -80,7 +80,7 @@ public class ChatController {
     var identity = currentSessionService.requireSession(
         authorizationHeader, "Sign in to send a message."
     );
-    return chatService.sendMessage(identity.userId(), threadId, request.content());
+    return chatService.sendMessage(identity.userId(), threadId, request.content(), request.imageUrl());
   }
 
   @PostMapping("/threads/{threadId}/read")
