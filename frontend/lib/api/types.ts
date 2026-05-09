@@ -268,6 +268,92 @@ export interface UserBlockListResponse {
   totalCount: number;
 }
 
+/* ── Tier 1: Admin dashboard ───────────────────────────────────────── */
+
+export interface AdminStatsResponse {
+  totalUsers: number;
+  totalOwners: number;
+  totalTenants: number;
+  totalListings: number;
+  publishedListings: number;
+  flaggedListings: number;
+  openReports: number;
+  recentVisits: number;
+  recentChats: number;
+}
+
+export interface AdminUserItem {
+  userId: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  role: string;
+  city: string;
+  profileStatus: string;
+  verifiedOwner: boolean;
+  blocked: boolean;
+  updatedAt: string;
+}
+
+export interface AdminUsersResponse {
+  items: AdminUserItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface AdminListingItem {
+  listingId: string;
+  title: string;
+  locality: string;
+  city: string;
+  ownerId: string;
+  ownerName: string;
+  status: string;
+  rent: number;
+  verified: boolean;
+  featured: boolean;
+  fraudScore: number;
+  openReports: number;
+  updatedAt: string;
+}
+
+export interface AdminListingsResponse {
+  items: AdminListingItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface AdminReportItem {
+  reportId: string;
+  listingId: string;
+  listingTitle: string;
+  reporterUserId: string;
+  reporterName: string;
+  reason: string;
+  details: string | null;
+  status: string;
+  createdAt: string;
+  reviewedAt: string | null;
+  resolutionNote: string | null;
+}
+
+export interface AdminReportsResponse {
+  items: AdminReportItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export type AdminReportAction = "IN_REVIEW" | "RESOLVED" | "DISMISSED";
+export type AdminListingStatus =
+  | "PUBLISHED"
+  | "DRAFT"
+  | "PAUSED"
+  | "ARCHIVED"
+  | "SUSPENDED";
+
 export interface FilterMetadataResponse {
   budgetRanges: string[];
   bhkOptions: string[];

@@ -552,3 +552,41 @@ ON CONFLICT (feature_key, plan_tier) DO NOTHING;
 INSERT INTO user_roles (user_id, role, granted_at)
 SELECT user_id, role, COALESCE(updated_at, CURRENT_TIMESTAMP) FROM users
 ON CONFLICT (user_id, role) DO NOTHING;
+
+-- Tier 1: locality nickname → canonical mapping. Seeded once; admins can extend later.
+INSERT INTO locality_aliases (alias, canonical, city) VALUES
+  ('hsr', 'HSR Layout', 'Bengaluru'),
+  ('btm', 'BTM Layout', 'Bengaluru'),
+  ('koramangala 4th block', 'Koramangala', 'Bengaluru'),
+  ('koramangala 5th block', 'Koramangala', 'Bengaluru'),
+  ('koramangala 6th block', 'Koramangala', 'Bengaluru'),
+  ('koramangala 7th block', 'Koramangala', 'Bengaluru'),
+  ('indira nagar', 'Indiranagar', 'Bengaluru'),
+  ('jp nagar', 'JP Nagar', 'Bengaluru'),
+  ('mg road', 'MG Road', 'Bengaluru'),
+  ('whitefield ecc', 'Whitefield', 'Bengaluru'),
+  ('marathahalli bridge', 'Marathahalli', 'Bengaluru'),
+  ('bandra w', 'Bandra West', NULL),
+  ('bandra e', 'Bandra East', NULL),
+  ('andheri w', 'Andheri West', NULL),
+  ('andheri e', 'Andheri East', NULL),
+  ('cp', 'Connaught Place', 'NCR-Delhi'),
+  ('saket', 'Saket', 'NCR-Delhi'),
+  ('hitec city', 'HITEC City', 'Hyderabad'),
+  ('hi-tech city', 'HITEC City', 'Hyderabad'),
+  ('jubilee hls', 'Jubilee Hills', 'Hyderabad'),
+  ('omr', 'OMR', 'Chennai'),
+  ('ecr', 'ECR', 'Chennai')
+ON CONFLICT (alias) DO NOTHING;
+
+-- Tier 1: bootstrap an admin if none exists. Default tester user_1a2b3c4d
+-- is promoted only when there is no other ADMIN.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM users WHERE role = 'ADMIN') THEN
+    UPDATE users SET role = 'ADMIN' WHERE user_id = 'user_1a2b3c4d';
+    INSERT INTO user_roles (user_id, role, granted_at)
+    VALUES ('user_1a2b3c4d', 'ADMIN', CURRENT_TIMESTAMP)
+    ON CONFLICT (user_id, role) DO NOTHING;
+  END IF;
+END $$;

@@ -134,7 +134,51 @@ public class OwnerListingService {
       savedSearchService.fanoutForNewListing(listingId);
     }
 
+    // Tier 1 — phone-reuse fraud check. Cheap heuristic: same masked phone
+    // across multiple owner accounts → +30 score. Same phone has 5+ listings
+    // already → +20 score. Best-effort: any failure is logged and ignored.
+    try {
+      runFraudCheck(listingId, ownerUserId, ownerIdentity.phoneMasked());
+    } catch (Exception ignored) {
+      // never let fraud scoring fail a real listing publish
+    }
+
     return new OwnerListingCreateResponse(listingId, listingStatus, formatTimestamp(createdAt));
+  }
+
+  private void runFraudCheck(String listingId, String ownerUserId, String phoneMasked) {
+    if (phoneMasked == null || phoneMasked.isBlank()) return;
+
+    int score = 0;
+
+    // Signal 1: same phone across multiple distinct owner accounts.
+    Integer otherOwnersWithSamePhone = jdbcTemplate.queryForObject("""
+            SELECT COUNT(DISTINCT owner_id)
+            FROM listings
+            WHERE owner_phone_masked = ?
+              AND owner_id <> ?
+            """,
+        Integer.class, phoneMasked, ownerUserId
+    );
+    if (otherOwnersWithSamePhone != null && otherOwnersWithSamePhone > 0) {
+      score += 30;
+    }
+
+    // Signal 2: very prolific phone number (potential broker farm).
+    Integer listingsWithSamePhone = jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM listings WHERE owner_phone_masked = ?",
+        Integer.class, phoneMasked
+    );
+    if (listingsWithSamePhone != null && listingsWithSamePhone >= 5) {
+      score += 20;
+    }
+
+    if (score > 0) {
+      jdbcTemplate.update(
+          "UPDATE listings SET fraud_score = ? WHERE listing_id = ?",
+          score, listingId
+      );
+    }
   }
 
   public OwnerListingsResponse getListings(
@@ -482,6 +526,132 @@ public class OwnerListingService {
 
   private String formatTimestamp(OffsetDateTime timestamp) {
     return timestamp.truncatedTo(ChronoUnit.SECONDS).toString();
+  }
+
+  /* ── Tier 1: bulk listing actions ────────────────────────────────────── */
+
+  @Transactional
+  public com.housing.ownertenantapi.dto.OwnerListingsBulkActionResponse bulkAction(
+      String authorizationHeader,
+      com.housing.ownertenantapi.dto.OwnerListingsBulkActionRequest request
+  ) {
+    String ownerUserId = currentSessionService.requireUserId(authorizationHeader);
+
+    String resultingStatus = switch (request.action()) {
+      case "PUBLISH" -> "PUBLISHED";
+      case "PAUSE"   -> "PAUSED";
+      case "ARCHIVE" -> "ARCHIVED";
+      default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+          "Unknown action: " + request.action());
+    };
+
+    if (request.listingIds().isEmpty()) {
+      return new com.housing.ownertenantapi.dto.OwnerListingsBulkActionResponse(
+          request.action(), resultingStatus, 0, 0);
+    }
+
+    // PostgreSQL: pass the list as a comma-separated VARCHAR[] so we can use ANY().
+    String[] ids = request.listingIds().toArray(new String[0]);
+
+    // Only update listings owned by this user — extra safety on top of the
+    // session check. Returns the count of rows that actually changed.
+    int updated = jdbcTemplate.update(
+        "UPDATE listings SET status = ?, updated_at = now() " +
+            "WHERE owner_id = ? AND listing_id = ANY (?)",
+        resultingStatus, ownerUserId, ids
+    );
+
+    int skipped = ids.length - updated;
+    return new com.housing.ownertenantapi.dto.OwnerListingsBulkActionResponse(
+        request.action(), resultingStatus, updated, Math.max(skipped, 0)
+    );
+  }
+
+  /* ── Tier 1: CSV export of owner leads ───────────────────────────────── */
+
+  public String exportOwnerLeadsCsv(String authorizationHeader) {
+    String ownerUserId = currentSessionService.requireUserId(authorizationHeader);
+
+    StringBuilder csv = new StringBuilder();
+    csv.append("lead_id,listing_id,listing_title,tenant_name,tenant_phone,tenant_email,status,created_at\n");
+
+    jdbcTemplate.query("""
+            SELECT lr.lead_id,
+                   lr.listing_id,
+                   COALESCE(l.title, '') AS listing_title,
+                   COALESCE(u.full_name, '') AS tenant_name,
+                   COALESCE(u.phone_number, '') AS tenant_phone,
+                   COALESCE(u.email, '') AS tenant_email,
+                   lr.status,
+                   to_char(lr.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+            FROM lead_requests lr
+            LEFT JOIN listings l ON l.listing_id = lr.listing_id
+            LEFT JOIN users u    ON u.user_id    = lr.tenant_user_id
+            WHERE lr.owner_user_id = ?
+            ORDER BY lr.created_at DESC
+            """,
+        rs -> {
+          csv.append(csvCell(rs.getString("lead_id"))).append(',')
+              .append(csvCell(rs.getString("listing_id"))).append(',')
+              .append(csvCell(rs.getString("listing_title"))).append(',')
+              .append(csvCell(rs.getString("tenant_name"))).append(',')
+              .append(csvCell(rs.getString("tenant_phone"))).append(',')
+              .append(csvCell(rs.getString("tenant_email"))).append(',')
+              .append(csvCell(rs.getString("status"))).append(',')
+              .append(csvCell(rs.getString("created_at"))).append('\n');
+        },
+        ownerUserId
+    );
+
+    return csv.toString();
+  }
+
+  private String csvCell(String value) {
+    if (value == null) return "";
+    String escaped = value.replace("\"", "\"\"");
+    if (escaped.contains(",") || escaped.contains("\"") || escaped.contains("\n")) {
+      return "\"" + escaped + "\"";
+    }
+    return escaped;
+  }
+
+  /* ── Tier 1: rollup analytics across all owner listings ──────────────── */
+
+  public java.util.Map<String, Object> getRollupAnalytics(String authorizationHeader) {
+    String ownerUserId = currentSessionService.requireUserId(authorizationHeader);
+    java.util.Map<String, Object> rollup = new java.util.LinkedHashMap<>();
+
+    rollup.put("listingCount", jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM listings WHERE owner_id = ?", Long.class, ownerUserId));
+    rollup.put("publishedCount", jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM listings WHERE owner_id = ? AND status = 'PUBLISHED'",
+        Long.class, ownerUserId));
+    rollup.put("totalLeads", jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM lead_requests WHERE owner_user_id = ?", Long.class, ownerUserId));
+    rollup.put("recentLeads", jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM lead_requests WHERE owner_user_id = ? AND created_at >= now() - INTERVAL '7 days'",
+        Long.class, ownerUserId));
+    rollup.put("scheduledVisits", jdbcTemplate.queryForObject("""
+            SELECT COUNT(*) FROM visits v
+            JOIN listings l ON l.listing_id = v.listing_id
+            WHERE l.owner_id = ? AND v.status = 'SCHEDULED'
+            """, Long.class, ownerUserId));
+    rollup.put("activeChats", jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM chat_threads WHERE owner_id = ?", Long.class, ownerUserId));
+    rollup.put("featuredCount", jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM listings WHERE owner_id = ? AND featured_until > now()",
+        Long.class, ownerUserId));
+    rollup.put("avgRating", jdbcTemplate.queryForObject("""
+            SELECT COALESCE(ROUND(AVG(r.rating)::numeric, 1), 0)::float8
+            FROM property_reviews r
+            JOIN listings l ON l.listing_id = r.listing_id
+            WHERE l.owner_id = ?
+            """, Double.class, ownerUserId));
+    rollup.put("flaggedListings", jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM listings WHERE owner_id = ? AND fraud_score > 0",
+        Long.class, ownerUserId));
+
+    return rollup;
   }
 
   private record OwnerIdentity(

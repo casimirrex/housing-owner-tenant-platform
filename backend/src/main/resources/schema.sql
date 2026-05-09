@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS owner_reviews CASCADE;
+DROP TABLE IF EXISTS locality_aliases CASCADE;
 DROP TABLE IF EXISTS user_blocks CASCADE;
 DROP TABLE IF EXISTS listing_reports CASCADE;
 DROP TABLE IF EXISTS payment_webhook_events CASCADE;
@@ -369,6 +371,8 @@ CREATE TABLE listings (
   owner_preferred_language TEXT,
   owner_badge TEXT,
   owner_years_on_platform INTEGER NOT NULL DEFAULT 0,
+  -- Tier 1: phone-reuse / suspicious-pattern score, surfaced in admin moderation queue.
+  fraud_score INTEGER NOT NULL DEFAULT 0,
   verification_label TEXT,
   owner_response_rate INTEGER NOT NULL DEFAULT 0,
   average_rating DOUBLE PRECISION NOT NULL DEFAULT 0,
@@ -918,3 +922,33 @@ CREATE TABLE user_blocks (
 );
 CREATE INDEX idx_user_blocks_blocked
   ON user_blocks(blocked_user_id);
+
+-- ─── Tier 1: Owner reviews + locality aliases + fraud index ─────────────
+
+-- Tenant rates an owner after a completed visit.
+CREATE TABLE owner_reviews (
+  review_id      VARCHAR(64) PRIMARY KEY,
+  owner_id       VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  reviewer_id    VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  reviewer_name  TEXT NOT NULL,
+  rating         INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  headline       TEXT NOT NULL,
+  comment        TEXT NOT NULL,
+  visit_id       VARCHAR(64) REFERENCES visits(visit_id) ON DELETE SET NULL,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK (owner_id <> reviewer_id)
+);
+CREATE INDEX idx_owner_reviews_owner ON owner_reviews(owner_id, created_at DESC);
+CREATE UNIQUE INDEX uniq_owner_reviews_per_visit
+  ON owner_reviews(visit_id) WHERE visit_id IS NOT NULL;
+
+-- Locality nicknames / aliases — joined into search FTS query.
+CREATE TABLE locality_aliases (
+  alias       TEXT PRIMARY KEY,
+  canonical   TEXT NOT NULL,
+  city        TEXT
+);
+CREATE INDEX idx_locality_aliases_canonical ON locality_aliases(canonical);
+
+-- Fraud score index: only listings with score > 0 are interesting.
+CREATE INDEX idx_listings_fraud ON listings(fraud_score DESC) WHERE fraud_score > 0;

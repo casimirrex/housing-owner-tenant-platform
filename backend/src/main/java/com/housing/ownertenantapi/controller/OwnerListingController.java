@@ -4,13 +4,18 @@ import com.housing.ownertenantapi.dto.OwnerListingCreateRequest;
 import com.housing.ownertenantapi.dto.OwnerListingCreateResponse;
 import com.housing.ownertenantapi.dto.OwnerListingUpdateRequest;
 import com.housing.ownertenantapi.dto.OwnerListingUpdateResponse;
+import com.housing.ownertenantapi.dto.OwnerListingsBulkActionRequest;
+import com.housing.ownertenantapi.dto.OwnerListingsBulkActionResponse;
 import com.housing.ownertenantapi.dto.OwnerListingsResponse;
 import com.housing.ownertenantapi.service.OwnerListingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.Map;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -62,6 +67,39 @@ public class OwnerListingController {
       @RequestParam(defaultValue = "10") int pageSize
   ) {
     return ownerListingService.getListings(authorizationHeader, status, page, pageSize);
+  }
+
+  @PostMapping("/bulk")
+  @Operation(
+      summary = "Bulk action on owner listings",
+      description = "Apply PUBLISH / PAUSE / ARCHIVE to multiple listings at once. " +
+          "Only listings owned by the authenticated user are affected."
+  )
+  public OwnerListingsBulkActionResponse bulkAction(
+      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+      @Valid @RequestBody OwnerListingsBulkActionRequest request
+  ) {
+    return ownerListingService.bulkAction(authorizationHeader, request);
+  }
+
+  @GetMapping(value = "/leads.csv", produces = "text/csv")
+  @Operation(summary = "Export this owner's leads as CSV")
+  public ResponseEntity<String> exportLeadsCsv(
+      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader
+  ) {
+    String body = ownerListingService.exportOwnerLeadsCsv(authorizationHeader);
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_TYPE, "text/csv; charset=utf-8")
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"leads.csv\"")
+        .body(body);
+  }
+
+  @GetMapping("/analytics/rollup")
+  @Operation(summary = "Owner-wide rollup analytics across all listings")
+  public Map<String, Object> getRollupAnalytics(
+      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader
+  ) {
+    return ownerListingService.getRollupAnalytics(authorizationHeader);
   }
 
   @PutMapping("/{listingId}")

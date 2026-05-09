@@ -4,6 +4,13 @@ import type {
   FilterMetadataResponse,
   HomeResponse,
   ListingCollectionResponse,
+  AdminListingsResponse,
+  AdminListingStatus,
+  AdminReportAction,
+  AdminReportItem,
+  AdminReportsResponse,
+  AdminStatsResponse,
+  AdminUsersResponse,
   ListingReportRequestBody,
   ListingReportResponse,
   MatchesResponse,
@@ -286,6 +293,94 @@ export function submitReview(
     `/api/v1/properties/${propertyId}/reviews`,
     {
       method: "POST",
+      body: JSON.stringify(body)
+    },
+    {},
+    accessToken
+  );
+}
+
+/* ── Tier 1: Admin dashboard ─────────────────────────────────────────── */
+
+export function adminGetStats(accessToken?: string) {
+  return fetchJson<AdminStatsResponse>("/api/v1/admin/stats", undefined, {}, accessToken);
+}
+
+export function adminListUsers(
+  query: { search?: string; role?: string; page?: number; pageSize?: number },
+  accessToken?: string
+) {
+  return fetchJson<AdminUsersResponse>(
+    "/api/v1/admin/users",
+    undefined,
+    {
+      search: query.search,
+      role: query.role,
+      page: query.page ?? 0,
+      pageSize: query.pageSize ?? 20
+    },
+    accessToken
+  );
+}
+
+export function adminListListings(
+  query: { status?: string; onlyFlagged?: boolean; page?: number; pageSize?: number },
+  accessToken?: string
+) {
+  return fetchJson<AdminListingsResponse>(
+    "/api/v1/admin/listings",
+    undefined,
+    {
+      status: query.status,
+      onlyFlagged: query.onlyFlagged,
+      page: query.page ?? 0,
+      pageSize: query.pageSize ?? 20
+    },
+    accessToken
+  );
+}
+
+export function adminModerateListing(
+  listingId: string,
+  status: AdminListingStatus,
+  accessToken?: string
+) {
+  return fetchJson<void>(
+    `/api/v1/admin/listings/${listingId}/moderate`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status })
+    },
+    {},
+    accessToken
+  );
+}
+
+export function adminListReports(
+  query: { status?: string; page?: number; pageSize?: number },
+  accessToken?: string
+) {
+  return fetchJson<AdminReportsResponse>(
+    "/api/v1/admin/reports",
+    undefined,
+    {
+      status: query.status,
+      page: query.page ?? 0,
+      pageSize: query.pageSize ?? 20
+    },
+    accessToken
+  );
+}
+
+export function adminActOnReport(
+  reportId: string,
+  body: { status: AdminReportAction; resolutionNote?: string },
+  accessToken?: string
+) {
+  return fetchJson<AdminReportItem>(
+    `/api/v1/admin/reports/${reportId}`,
+    {
+      method: "PATCH",
       body: JSON.stringify(body)
     },
     {},

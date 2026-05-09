@@ -360,10 +360,19 @@ public class SearchService {
     }
 
     if (query != null && !query.isBlank()) {
-      fromClause.append(" AND (lower(title) LIKE ? OR lower(locality) LIKE ?)");
-      String normalized = "%" + query.trim().toLowerCase(Locale.ROOT) + "%";
-      parameters.add(normalized);
-      parameters.add(normalized);
+      // Tier 1: locality nicknames. If the user typed "HSR", expand the search
+      // to also match listings whose locality is the canonical "HSR Layout".
+      // We OR the alias's canonical into the LIKE clause so a single query
+      // catches both raw text matches and aliased localities.
+      String normalizedQuery = "%" + query.trim().toLowerCase(Locale.ROOT) + "%";
+      fromClause.append(
+          " AND (lower(title) LIKE ? OR lower(locality) LIKE ? OR " +
+          "      lower(locality) IN (SELECT lower(canonical) FROM locality_aliases " +
+          "                          WHERE lower(alias) = ?))"
+      );
+      parameters.add(normalizedQuery);
+      parameters.add(normalizedQuery);
+      parameters.add(query.trim().toLowerCase(Locale.ROOT));
     }
 
     if (budgetMin != null) {
