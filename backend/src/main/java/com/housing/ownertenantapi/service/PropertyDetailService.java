@@ -164,7 +164,8 @@ public class PropertyDetailService {
             """, Long.class, propertyId);
 
     List<PropertyReviewItemResponse> reviews = jdbcTemplate.query("""
-            SELECT review_id, reviewer_name, rating, headline, comment, reviewer_type, created_at
+            SELECT review_id, reviewer_name, rating, headline, comment, reviewer_type, created_at,
+                   (visit_id IS NOT NULL) AS verified_stay
             FROM property_reviews
             WHERE listing_id = ?
             ORDER BY created_at DESC
@@ -177,7 +178,8 @@ public class PropertyDetailService {
             rs.getString("headline"),
             rs.getString("comment"),
             rs.getString("reviewer_type"),
-            rs.getDate("created_at").toLocalDate().toString()
+            rs.getDate("created_at").toLocalDate().toString(),
+            rs.getBoolean("verified_stay")
         ),
         propertyId,
         safePageSize,

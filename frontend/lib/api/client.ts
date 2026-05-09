@@ -4,9 +4,17 @@ import type {
   FilterMetadataResponse,
   HomeResponse,
   ListingCollectionResponse,
+  ListingReportRequestBody,
+  ListingReportResponse,
   MatchesResponse,
   LogoutResponse,
   NearbyResponse,
+  ReviewEligibilityResponse,
+  ReviewSubmitRequestBody,
+  ReviewSubmittedResponse,
+  UserBlock,
+  UserBlockListResponse,
+  UserBlockRequestBody,
   OwnerListingsResponse,
   OwnerGetStartedResponse,
   OwnerCreatePaymentRecordRequest,
@@ -258,6 +266,79 @@ export function saveProperty(propertyId: string) {
   return fetchJson<SavePropertyResponse>(`/api/v1/properties/${propertyId}/save`, {
     method: "POST"
   });
+}
+
+export function getReviewEligibility(propertyId: string, accessToken?: string) {
+  return fetchJson<ReviewEligibilityResponse>(
+    `/api/v1/properties/${propertyId}/reviews/eligibility`,
+    undefined,
+    {},
+    accessToken
+  );
+}
+
+export function submitReview(
+  propertyId: string,
+  body: ReviewSubmitRequestBody,
+  accessToken?: string
+) {
+  return fetchJson<ReviewSubmittedResponse>(
+    `/api/v1/properties/${propertyId}/reviews`,
+    {
+      method: "POST",
+      body: JSON.stringify(body)
+    },
+    {},
+    accessToken
+  );
+}
+
+export function listUserBlocks(accessToken?: string) {
+  return fetchJson<UserBlockListResponse>(
+    "/api/v1/users/blocks",
+    undefined,
+    {},
+    accessToken
+  );
+}
+
+export function blockUser(body: UserBlockRequestBody, accessToken?: string) {
+  return fetchJson<UserBlock>(
+    "/api/v1/users/blocks",
+    {
+      method: "POST",
+      body: JSON.stringify(body)
+    },
+    {},
+    accessToken
+  );
+}
+
+export function unblockUser(blockedUserId: string, accessToken?: string) {
+  return fetchJson<void>(
+    `/api/v1/users/blocks/${blockedUserId}`,
+    {
+      method: "DELETE"
+    },
+    {},
+    accessToken
+  );
+}
+
+export function reportProperty(
+  propertyId: string,
+  body: ListingReportRequestBody,
+  accessToken?: string
+) {
+  return fetchJson<ListingReportResponse>(
+    `/api/v1/properties/${propertyId}/report`,
+    {
+      method: "POST",
+      body: JSON.stringify(body)
+    },
+    {},
+    accessToken
+  );
 }
 
 export function removeSavedProperty(propertyId: string) {

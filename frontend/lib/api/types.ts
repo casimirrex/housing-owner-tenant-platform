@@ -201,6 +201,73 @@ export interface NearbyResponse {
   radiusKm: number;
 }
 
+export type ListingReportReason =
+  | "FAKE_LISTING"
+  | "WRONG_INFORMATION"
+  | "SPAM"
+  | "SCAM_OR_FRAUD"
+  | "OFFENSIVE_CONTENT"
+  | "ALREADY_RENTED"
+  | "DUPLICATE"
+  | "OTHER";
+
+export interface ListingReportRequestBody {
+  reason: ListingReportReason;
+  details?: string;
+}
+
+export interface ListingReportResponse {
+  reportId: string;
+  listingId: string;
+  reason: ListingReportReason;
+  status: string;
+  createdAt: string;
+}
+
+export type ReviewEligibilityReason =
+  | "OK"
+  | "NEEDS_VISIT"
+  | "VISIT_NOT_COMPLETED"
+  | "ALREADY_REVIEWED"
+  | "NOT_AUTHENTICATED";
+
+export interface ReviewEligibilityResponse {
+  eligible: boolean;
+  reason: ReviewEligibilityReason;
+  message: string;
+}
+
+export interface ReviewSubmitRequestBody {
+  rating: number;
+  headline: string;
+  comment: string;
+}
+
+export interface ReviewSubmittedResponse {
+  reviewId: string;
+  listingId: string;
+  visitId: string;
+  rating: number;
+  verifiedStay: boolean;
+}
+
+export interface UserBlockRequestBody {
+  userId: string;
+  reason?: string;
+}
+
+export interface UserBlock {
+  blockerUserId: string;
+  blockedUserId: string;
+  reason: string | null;
+  createdAt: string;
+}
+
+export interface UserBlockListResponse {
+  items: UserBlock[];
+  totalCount: number;
+}
+
 export interface FilterMetadataResponse {
   budgetRanges: string[];
   bhkOptions: string[];
@@ -312,6 +379,8 @@ export interface PropertyReview {
   comment: string;
   reviewerType: string;
   createdAt: string;
+  /** Tier 0 trust & safety: review came from a user with a COMPLETED visit. */
+  verifiedStay?: boolean;
 }
 
 export interface PropertyReviewsResponse {

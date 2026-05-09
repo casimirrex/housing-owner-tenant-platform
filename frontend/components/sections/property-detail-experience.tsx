@@ -19,6 +19,8 @@ import {
 import { ExpressInterestModal } from "@/components/ui/express-interest-modal";
 import { ScheduleVisitModal } from "@/components/ui/schedule-visit-modal";
 import { AddToCompareButton } from "@/components/ui/add-to-compare-button";
+import { ReportListingButton } from "@/components/ui/report-listing-button";
+import { LeaveReviewButton } from "@/components/ui/leave-review-button";
 import { startChatThread } from "@/lib/api/client";
 import { ShortlistButton } from "@/components/ui/shortlist-button";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -281,6 +283,11 @@ export function PropertyDetailExperience({
           </div>
           <div className="mt-6 grid gap-3">
             <ShortlistButton propertyId={detail.property.propertyId} />
+            {!isOwnerView ? (
+              <div className="flex justify-end">
+                <ReportListingButton propertyId={detail.property.propertyId} />
+              </div>
+            ) : null}
             {isOwnerView ? (
               <Link className="button-secondary" href="/owner/dashboard">
                 <Building2 className="mr-2 h-4 w-4" />
@@ -484,15 +491,26 @@ export function PropertyDetailExperience({
                     <p className="pb-2 text-sm text-ink/65">{reviews.ratingSummary.totalReviews} reviews</p>
                   </div>
                 </div>
-                <span className="meta-pill">
-                  <BadgeCheck className="mr-2 h-4 w-4 text-pine" />
-                  Verified trust layer
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="meta-pill">
+                    <BadgeCheck className="mr-2 h-4 w-4 text-pine" />
+                    Verified trust layer
+                  </span>
+                  <LeaveReviewButton propertyId={propertyId} />
+                </div>
               </div>
               <div className="mt-8 grid gap-4">
                 {reviews.reviews.map((review) => (
                   <article className="soft-panel" key={review.reviewId}>
-                    <p className="font-semibold text-ink">{review.headline}</p>
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-semibold text-ink">{review.headline}</p>
+                      {review.verifiedStay ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                          <BadgeCheck className="h-3 w-3" />
+                          Verified stay
+                        </span>
+                      ) : null}
+                    </div>
                     <p className="mt-2 text-sm leading-7 text-ink/68">{review.comment}</p>
                     <p className="mt-3 text-xs uppercase tracking-[0.16em] text-copper">
                       {review.reviewerName} • {review.reviewerType} • {review.rating}/5

@@ -18,6 +18,8 @@ public record PropertyReviewItemResponse(
     @Schema(description = "Reviewer type", example = "Tenant")
     String reviewerType,
     @Schema(description = "When the review was published", example = "2026-03-28")
-    String createdAt
+    String createdAt,
+    @Schema(description = "Whether this review is from a verified completed visit", example = "true")
+    boolean verifiedStay
 ) {
 }

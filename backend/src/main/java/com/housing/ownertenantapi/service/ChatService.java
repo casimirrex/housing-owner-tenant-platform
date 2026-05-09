@@ -108,7 +108,14 @@ public class ChatService {
             JOIN listings l ON l.listing_id = t.listing_id
             JOIN users te ON te.user_id = t.tenant_id
             JOIN users o  ON o.user_id  = t.owner_id
-            WHERE t.tenant_id = :userId OR t.owner_id = :userId
+            WHERE (t.tenant_id = :userId OR t.owner_id = :userId)
+              AND NOT EXISTS (
+                SELECT 1 FROM user_blocks b
+                WHERE b.blocker_user_id = :userId
+                  AND b.blocked_user_id = CASE WHEN t.tenant_id = :userId
+                                               THEN t.owner_id
+                                               ELSE t.tenant_id END
+              )
             ORDER BY COALESCE(t.last_message_at, t.created_at) DESC
             LIMIT 100
             """)

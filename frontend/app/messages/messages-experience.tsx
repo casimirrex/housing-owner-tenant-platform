@@ -17,6 +17,7 @@ import {
   markThreadRead,
   sendChatMessage
 } from "@/lib/api/client";
+import { BlockUserButton } from "@/components/ui/block-user-button";
 import { useAuthStore } from "@/store/auth-store";
 
 const POLL_INTERVAL_MS = 5_000;
@@ -247,9 +248,17 @@ export function MessagesExperience() {
                     ) : "—"}
                   </p>
                 </div>
-                <span className="rounded-full bg-pine/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-pine">
-                  {activeThread?.myRole === "OWNER" ? "Owner view" : "Tenant view"}
-                </span>
+                <div className="flex flex-col items-end gap-2">
+                  <span className="rounded-full bg-pine/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-pine">
+                    {activeThread?.myRole === "OWNER" ? "Owner view" : "Tenant view"}
+                  </span>
+                  {activeThread ? (
+                    <BlockUserButton
+                      blockedUserId={activeThread.counterpartyId}
+                      blockedUserName={activeThread.counterpartyName}
+                    />
+                  ) : null}
+                </div>
               </header>
 
               {/* Messages */}

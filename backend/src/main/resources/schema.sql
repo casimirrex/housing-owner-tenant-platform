@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS user_blocks CASCADE;
+DROP TABLE IF EXISTS listing_reports CASCADE;
 DROP TABLE IF EXISTS payment_webhook_events CASCADE;
 DROP TABLE IF EXISTS payment_idempotency CASCADE;
 DROP TABLE IF EXISTS document_verifications CASCADE;
@@ -410,7 +412,10 @@ CREATE TABLE property_reviews (
   headline TEXT NOT NULL,
   comment TEXT NOT NULL,
   reviewer_type TEXT NOT NULL,
-  created_at DATE NOT NULL
+  created_at DATE NOT NULL,
+  -- Tier 0 trust & safety: links review to a completed visit (verified-stay gating).
+  -- FK to visits added later in this file (visits is defined further down).
+  visit_id VARCHAR(64)
 );
 
 CREATE TABLE property_faq (
@@ -867,3 +872,49 @@ CREATE INDEX idx_webhook_retry
   WHERE status IN ('RECEIVED','FAILED');
 CREATE INDEX idx_webhook_provider_type
   ON payment_webhook_events (provider, event_type, received_at DESC);
+
+-- ─── Tier 0 trust & safety ───────────────────────────────────────────────
+
+-- Backfill the FK on property_reviews.visit_id now that `visits` exists.
+ALTER TABLE property_reviews
+  ADD CONSTRAINT fk_property_reviews_visit
+    FOREIGN KEY (visit_id) REFERENCES visits(visit_id) ON DELETE SET NULL;
+
+CREATE INDEX idx_property_reviews_visit
+  ON property_reviews(visit_id) WHERE visit_id IS NOT NULL;
+
+-- Listing reports — "Report this listing" flow.
+CREATE TABLE listing_reports (
+  report_id        VARCHAR(64) PRIMARY KEY,
+  listing_id       VARCHAR(64) NOT NULL REFERENCES listings(listing_id) ON DELETE CASCADE,
+  reporter_user_id VARCHAR(64) NOT NULL REFERENCES users(user_id)       ON DELETE CASCADE,
+  reason           TEXT NOT NULL CHECK (reason IN (
+                     'FAKE_LISTING','WRONG_INFORMATION','SPAM','SCAM_OR_FRAUD',
+                     'OFFENSIVE_CONTENT','ALREADY_RENTED','DUPLICATE','OTHER')),
+  details          TEXT,
+  status           TEXT NOT NULL DEFAULT 'OPEN'
+                    CHECK (status IN ('OPEN','IN_REVIEW','RESOLVED','DISMISSED')),
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  reviewed_at      TIMESTAMPTZ,
+  reviewer_user_id VARCHAR(64) REFERENCES users(user_id) ON DELETE SET NULL,
+  resolution_note  TEXT
+);
+CREATE INDEX idx_listing_reports_listing
+  ON listing_reports(listing_id, status, created_at DESC);
+CREATE INDEX idx_listing_reports_status
+  ON listing_reports(status, created_at DESC);
+CREATE UNIQUE INDEX uniq_listing_reports_open_per_reporter
+  ON listing_reports(listing_id, reporter_user_id)
+  WHERE status = 'OPEN';
+
+-- User blocks — hide listings/messages from blocked users.
+CREATE TABLE user_blocks (
+  blocker_user_id VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  blocked_user_id VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  reason          TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (blocker_user_id, blocked_user_id),
+  CHECK (blocker_user_id <> blocked_user_id)
+);
+CREATE INDEX idx_user_blocks_blocked
+  ON user_blocks(blocked_user_id);
