@@ -24,6 +24,7 @@ import {
 } from "@/lib/api/client";
 import type { NearbyResponse, SearchMapPin, SearchMapRequest } from "@/lib/api/types";
 import { useSearchStore } from "@/store/search-store";
+import { useTranslation } from "@/lib/i18n/use-translation";
 
 const CITY_VIEWPORTS: Record<string, Omit<SearchMapRequest, "filters">> = {
   Bengaluru: { northEastLat: 13.1, northEastLng: 77.8, southWestLat: 12.85, southWestLng: 77.5 },
@@ -47,6 +48,7 @@ export function SearchExperience({
   initialVerified?: boolean;
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const { city, query, budgetMax, bhk, verified, setFilters } = useSearchStore();
   const [draftQuery, setDraftQuery] = useState(initialQuery);
   const [draftBhk, setDraftBhk] = useState(initialBhk ?? "");
@@ -392,7 +394,7 @@ export function SearchExperience({
               onClick={applyFilters}
               type="button"
             >
-              Apply filters
+              {t("search.applyFilters")}
             </button>
           </div>
 
@@ -400,7 +402,7 @@ export function SearchExperience({
 
           <div className="mt-6">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-copper">
-              Find homes near you
+              {t("search.findHomesNearYou")}
             </p>
             <p className="mt-2 text-xs leading-5 text-ink/60">
               We use your device location to surface listings ranked by distance.
@@ -426,7 +428,7 @@ export function SearchExperience({
               type="button"
             >
               <Locate className="mr-2 h-4 w-4" />
-              {nearbyLoading ? "Locating…" : "Use my location"}
+              {nearbyLoading ? t("search.locating") : t("search.useMyLocation")}
             </button>
             {nearbyError ? (
               <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-700">

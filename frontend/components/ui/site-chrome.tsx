@@ -10,28 +10,32 @@ import { useAuthStore } from "@/store/auth-store";
 import { RoleSwitcher } from "@/components/ui/role-switcher";
 import { CompareFloatingBar } from "@/components/ui/compare-floating-bar";
 import { LocaleSwitcher } from "@/components/ui/locale-switcher";
+import { useTranslation } from "@/lib/i18n/use-translation";
+import type { TranslationKey } from "@/lib/i18n/dictionary";
 
-const guestNavItems = [
-  { href: "/search",           label: "Search" },
-  { href: "/cities/bengaluru", label: "Cities" },
-  { href: "/how-it-works",     label: "How it works" },
-  { href: "/about",            label: "About" },
-  { href: "/contact",          label: "Support" },
+type NavItem = { href: string; labelKey: TranslationKey };
+
+const guestNavItems: NavItem[] = [
+  { href: "/search",           labelKey: "nav.search" },
+  { href: "/cities/bengaluru", labelKey: "nav.cities" },
+  { href: "/how-it-works",     labelKey: "nav.howItWorks" },
+  { href: "/about",            labelKey: "nav.about" },
+  { href: "/contact",          labelKey: "nav.support" },
 ];
 
-function getSignedInNavItems(role?: string | null) {
+function getSignedInNavItems(role?: string | null): NavItem[] {
   return [
-    { href: "/search",           label: "Search" },
-    { href: "/cities/bengaluru", label: "Cities" },
-    { href: "/payments",         label: "Payments" },
-    { href: "/wallet",           label: "Wallet" },
+    { href: "/search",           labelKey: "nav.search" },
+    { href: "/cities/bengaluru", labelKey: "nav.cities" },
+    { href: "/payments",         labelKey: "nav.payments" },
+    { href: "/wallet",           labelKey: "nav.wallet" },
     {
       href: role === "OWNER" ? "/owner/dashboard" : "/tenant/dashboard",
-      label: "Dashboard",
+      labelKey: "nav.dashboard",
     },
-    { href: "/how-it-works", label: "How it works" },
-    { href: "/about",        label: "About" },
-    { href: "/contact",      label: "Support" },
+    { href: "/how-it-works", labelKey: "nav.howItWorks" },
+    { href: "/about",        labelKey: "nav.about" },
+    { href: "/contact",      labelKey: "nav.support" },
   ];
 }
 
@@ -206,6 +210,7 @@ function HeaderAccountActions() {
 /* ─── Site shell ─────────────────────────────────────────────────────────── */
 export function SiteChrome({ children }: { children: ReactNode }) {
   const { session } = useAuthStore();
+  const { t } = useTranslation();
   const navItems    = session ? getSignedInNavItems(session.role) : guestNavItems;
 
   return (
@@ -234,7 +239,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
                   href={item.href}
                   key={item.href}
                 >
-                  {item.label}
+                  {t(item.labelKey)}
                 </Link>
               ))}
             </nav>
@@ -253,7 +258,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
                 href={item.href}
                 key={item.href}
               >
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             ))}
           </nav>
