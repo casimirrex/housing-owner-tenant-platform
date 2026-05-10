@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Inbox, Mail, Phone, Sparkles } from "lucide-react";
 import { getOwnerLeads } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth-store";
+import { WhatsAppMessageButton } from "@/components/ui/whatsapp-button";
+import { ownerReplyMessage } from "@/lib/whatsapp";
 
 /**
  * Tier 1 #3 — Owner-side inbox of paid leads from tenants.
@@ -92,6 +94,17 @@ export function OwnerLeadsPanel() {
                     <Phone className="h-3.5 w-3.5" />
                     {lead.tenantPhone}
                   </a>
+                ) : null}
+                {lead.tenantPhone ? (
+                  <WhatsAppMessageButton
+                    size="sm"
+                    label="Reply on WhatsApp"
+                    phone={lead.tenantPhone}
+                    message={ownerReplyMessage({
+                      tenantName: lead.tenantName,
+                      listingTitle: lead.listingTitle
+                    })}
+                  />
                 ) : null}
               </div>
 

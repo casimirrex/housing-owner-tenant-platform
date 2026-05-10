@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { CalendarClock, Clock, Mail, Phone, Sparkles } from "lucide-react";
 import { getOwnerVisits } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth-store";
+import { WhatsAppMessageButton } from "@/components/ui/whatsapp-button";
+import { visitConfirmMessage } from "@/lib/whatsapp";
 
 /**
  * Tier 2 #5 — Owner-side panel showing visits booked on their listings.
@@ -109,6 +111,18 @@ export function OwnerVisitsPanel() {
                     <Phone className="h-3.5 w-3.5" />
                     {v.tenantPhone}
                   </a>
+                ) : null}
+                {v.tenantPhone && v.status === "SCHEDULED" ? (
+                  <WhatsAppMessageButton
+                    size="sm"
+                    label="Confirm on WhatsApp"
+                    phone={v.tenantPhone}
+                    message={visitConfirmMessage({
+                      tenantName: v.tenantName,
+                      listingTitle: v.listingTitle,
+                      scheduledLabel: `${new Date(v.preferredDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", weekday: "short" })} ${v.slotLabel}`
+                    })}
+                  />
                 ) : null}
               </div>
 

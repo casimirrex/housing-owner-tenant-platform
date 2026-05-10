@@ -18,6 +18,8 @@ import {
 import { getPropertyDetail } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth-store";
 import { useCompareStore } from "@/store/compare-store";
+import { WhatsAppShareButton } from "@/components/ui/whatsapp-button";
+import { shareCompareMessage } from "@/lib/whatsapp";
 
 /**
  * Tier 2 #7 — Compare Properties.
@@ -86,13 +88,24 @@ export default function ComparePage() {
             Side-by-side view. Click a card to open the full property detail.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={clear}
-          className="text-xs font-semibold text-red-600 hover:text-red-800"
-        >
-          Clear all
-        </button>
+        <div className="flex items-center gap-2">
+          <WhatsAppShareButton
+            size="sm"
+            label="Share comparison"
+            message={shareCompareMessage(
+              properties
+                .map((p) => p.data?.property.title)
+                .filter((t): t is string => Boolean(t))
+            )}
+          />
+          <button
+            type="button"
+            onClick={clear}
+            className="text-xs font-semibold text-red-600 hover:text-red-800"
+          >
+            Clear all
+          </button>
+        </div>
       </div>
 
       {/* Property column headers */}

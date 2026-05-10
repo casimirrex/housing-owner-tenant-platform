@@ -24,6 +24,11 @@ import { LeaveReviewButton } from "@/components/ui/leave-review-button";
 import { PhotoCarousel } from "@/components/ui/photo-carousel";
 import { startChatThread } from "@/lib/api/client";
 import { ShortlistButton } from "@/components/ui/shortlist-button";
+import {
+  WhatsAppMessageButton,
+  WhatsAppShareButton
+} from "@/components/ui/whatsapp-button";
+import { inquiryMessage, shareListingMessage } from "@/lib/whatsapp";
 import { SectionHeading } from "@/components/ui/section-heading";
 import {
   activateTenantPremium,
@@ -290,6 +295,34 @@ export function PropertyDetailExperience({
           </div>
           <div className="mt-6 grid gap-3">
             <ShortlistButton propertyId={detail.property.propertyId} />
+            {/* Phase A WhatsApp — share is always free; message owner only when contact is unlocked */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <WhatsAppShareButton
+                size="sm"
+                label="Share"
+                message={shareListingMessage({
+                  title: detail.property.title,
+                  locality: detail.property.locality,
+                  city: detail.property.city,
+                  rent: detail.pricing.monthlyRent,
+                  listingId: detail.property.propertyId
+                })}
+              />
+              {!isOwnerView ? (
+                <WhatsAppMessageButton
+                  size="sm"
+                  label="Message owner"
+                  phone={detail.ownerInfo.phoneMasked}
+                  message={inquiryMessage({
+                    title: detail.property.title,
+                    locality: detail.property.locality,
+                    city: detail.property.city,
+                    rent: detail.pricing.monthlyRent,
+                    listingId: detail.property.propertyId
+                  })}
+                />
+              ) : null}
+            </div>
             {!isOwnerView ? (
               <div className="flex justify-end">
                 <ReportListingButton propertyId={detail.property.propertyId} />

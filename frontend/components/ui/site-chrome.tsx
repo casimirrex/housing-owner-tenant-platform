@@ -12,6 +12,8 @@ import { CompareFloatingBar } from "@/components/ui/compare-floating-bar";
 import { LocaleSwitcher } from "@/components/ui/locale-switcher";
 import { useTranslation } from "@/lib/i18n/use-translation";
 import type { TranslationKey } from "@/lib/i18n/dictionary";
+import { WhatsAppMessageButton } from "@/components/ui/whatsapp-button";
+import { SUPPORT_WHATSAPP, platformSupportMessage } from "@/lib/whatsapp";
 
 type NavItem = { href: string; labelKey: TranslationKey };
 
@@ -294,6 +296,14 @@ export function SiteChrome({ children }: { children: ReactNode }) {
                   <Link className="button-secondary" href="/owner/register">
                     List your home
                   </Link>
+                  {SUPPORT_WHATSAPP ? (
+                    <WhatsAppMessageButton
+                      size="md"
+                      label="WhatsApp support"
+                      phone={SUPPORT_WHATSAPP}
+                      message={platformSupportMessage()}
+                    />
+                  ) : null}
                 </div>
               </div>
 

@@ -18,6 +18,8 @@ import {
 } from "@/lib/api/client";
 import type { LeaseItem, LeaseStatus } from "@/lib/api/types";
 import { useAuthStore } from "@/store/auth-store";
+import { WhatsAppShareButton } from "@/components/ui/whatsapp-button";
+import { shareLeaseMessage } from "@/lib/whatsapp";
 
 export default function TenantLeasesPage() {
   const accessToken = useAuthStore((state) => state.session?.accessToken);
@@ -342,26 +344,38 @@ function LeaseCard({
         </span>
       </div>
 
-      {lease.status === "ACTIVE" ? (
-        <div className="mt-4 flex flex-wrap gap-2 border-t border-black/5 pt-3">
-          <button
-            type="button"
-            onClick={() => onUpdate("ENDED")}
-            disabled={busy}
-            className="button-ghost text-xs"
-          >
-            Mark as ended
-          </button>
-          <button
-            type="button"
-            onClick={() => onUpdate("TERMINATED")}
-            disabled={busy}
-            className="button-ghost text-xs text-rose-700"
-          >
-            Terminated early
-          </button>
-        </div>
-      ) : null}
+      <div className="mt-4 flex flex-wrap gap-2 border-t border-black/5 pt-3">
+        <WhatsAppShareButton
+          size="sm"
+          label="Share lease"
+          message={shareLeaseMessage({
+            listingTitle: lease.listingTitle,
+            rent: lease.monthlyRent,
+            startDate: lease.startDate,
+            endDate: lease.endDate
+          })}
+        />
+        {lease.status === "ACTIVE" ? (
+          <>
+            <button
+              type="button"
+              onClick={() => onUpdate("ENDED")}
+              disabled={busy}
+              className="button-ghost text-xs"
+            >
+              Mark as ended
+            </button>
+            <button
+              type="button"
+              onClick={() => onUpdate("TERMINATED")}
+              disabled={busy}
+              className="button-ghost text-xs text-rose-700"
+            >
+              Terminated early
+            </button>
+          </>
+        ) : null}
+      </div>
     </article>
   );
 }

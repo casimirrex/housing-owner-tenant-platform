@@ -25,6 +25,8 @@ import {
 import type { NearbyResponse, SearchMapPin, SearchMapRequest } from "@/lib/api/types";
 import { useSearchStore } from "@/store/search-store";
 import { useTranslation } from "@/lib/i18n/use-translation";
+import { WhatsAppShareButton } from "@/components/ui/whatsapp-button";
+import { shareSearchMessage } from "@/lib/whatsapp";
 
 const CITY_VIEWPORTS: Record<string, Omit<SearchMapRequest, "filters">> = {
   Bengaluru: { northEastLat: 13.1, northEastLng: 77.8, southWestLat: 12.85, southWestLng: 77.5 },
@@ -267,6 +269,11 @@ export function SearchExperience({
               bhk={bhk}
               budgetMax={budgetMax}
               verified={verified}
+            />
+            <WhatsAppShareButton
+              size="sm"
+              label="Share search"
+              message={shareSearchMessage(city, searchQuery.data?.pagination.totalItems)}
             />
           </div>
         </div>

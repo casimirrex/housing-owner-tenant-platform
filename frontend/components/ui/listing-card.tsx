@@ -3,6 +3,8 @@
 import Link from "next/link";
 import type { ListingSummary } from "@/lib/api/types";
 import { AddToCompareButton } from "@/components/ui/add-to-compare-button";
+import { WhatsAppShareButton } from "@/components/ui/whatsapp-button";
+import { shareListingMessage } from "@/lib/whatsapp";
 
 export function ListingCard({
   listing,
@@ -65,6 +67,17 @@ export function ListingCard({
             Quick summary for renters who want pricing and timing upfront.
           </p>
           <div className="flex flex-wrap gap-2.5">
+            <WhatsAppShareButton
+              size="sm"
+              label="Share"
+              message={shareListingMessage({
+                title: listing.title,
+                locality: listing.locality,
+                city: listing.city,
+                rent: listing.rent,
+                listingId: listing.listingId
+              })}
+            />
             <AddToCompareButton listingId={listing.listingId} variant="pill" />
             {cityHref ? (
               <Link className="button-secondary px-4 py-2 text-sm" href={cityHref}>
