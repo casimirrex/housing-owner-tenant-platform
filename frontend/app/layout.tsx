@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { SiteChrome } from "@/components/ui/site-chrome";
 import { ServiceWorkerRegistrar } from "@/components/ui/service-worker-registrar";
 import { OnboardingTour } from "@/components/ui/onboarding-tour";
+import { HtmlLangSync } from "@/components/ui/html-lang-sync";
 import { Providers } from "@/app/providers";
 import "@/app/globals.css";
 
@@ -70,6 +71,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </Providers>
         <ServiceWorkerRegistrar />
         <OnboardingTour />
+        <HtmlLangSync />
       </body>
     </html>
   );

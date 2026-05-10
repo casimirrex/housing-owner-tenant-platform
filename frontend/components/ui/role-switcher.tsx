@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ChevronDown, Plus, RefreshCw } from "lucide-react";
 import { switchUserRole } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth-store";
+import { useTranslation } from "@/lib/i18n/use-translation";
 
 /**
  * Bug F multi-role: header dropdown that lets a user switch between TENANT
@@ -24,6 +25,7 @@ import { useAuthStore } from "@/store/auth-store";
 export function RoleSwitcher() {
   const router = useRouter();
   const { session, setSession } = useAuthStore();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -78,7 +80,10 @@ export function RoleSwitcher() {
     }
   };
 
-  const formatRole = (r: string) => (r === "OWNER" ? "Owner" : "Tenant");
+  const actingLabel = (role: string) =>
+    role === "OWNER" ? t("role.actingAsOwner") : t("role.actingAsTenant");
+  const workspaceLabel = (role: string) =>
+    role === "OWNER" ? t("role.ownerWorkspace") : t("role.tenantWorkspace");
 
   return (
     <div className="relative" ref={containerRef}>
@@ -91,7 +96,7 @@ export function RoleSwitcher() {
         aria-expanded={open}
       >
         {pending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : null}
-        <span>Acting as {formatRole(activeRole)}</span>
+        <span>{actingLabel(activeRole)}</span>
         <ChevronDown className="h-3.5 w-3.5" />
       </button>
 
@@ -101,7 +106,7 @@ export function RoleSwitcher() {
           className="absolute right-0 z-50 mt-2 w-60 rounded-2xl border border-black/8 bg-white p-2 shadow-soft"
         >
           <p className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-ink/45">
-            Switch workspace
+            {t("role.switchWorkspace")}
           </p>
           {available.map((r) => {
             const isActive = r === activeRole;
@@ -118,8 +123,8 @@ export function RoleSwitcher() {
                     : "text-ink hover:bg-sand"
                 } ${pending ? "opacity-60" : ""}`}
               >
-                <span>{formatRole(r)} workspace</span>
-                {isActive ? <span className="text-xs text-pine">Active</span> : null}
+                <span>{workspaceLabel(r)}</span>
+                {isActive ? <span className="text-xs text-pine">{t("role.active")}</span> : null}
               </button>
             );
           })}
@@ -138,7 +143,7 @@ export function RoleSwitcher() {
                   onClick={() => setOpen(false)}
                 >
                   <Plus className="h-4 w-4 text-copper" />
-                  <span>Add {formatRole(r)} workspace</span>
+                  <span>+ {workspaceLabel(r)}</span>
                 </Link>
               ))}
             </>

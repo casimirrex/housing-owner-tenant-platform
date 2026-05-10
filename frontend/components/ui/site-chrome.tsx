@@ -94,6 +94,7 @@ function AccountAvatar({
 function HeaderAccountActions() {
   const router  = useRouter();
   const { session, clearSession, setStatusMessage } = useAuthStore();
+  const { t } = useTranslation();
 
   const signOutMutation = useMutation({
     mutationFn: async () => {
@@ -145,14 +146,12 @@ function HeaderAccountActions() {
   const displayName   = getDisplayName(session.fullName, session.email);
   const accountLabel  =
     session.role === "OWNER"
-      ? "Owner account"
-      : session.authMethod === "GOOGLE"
-        ? "Signed in with Gmail"
-        : "Signed in";
+      ? t("chrome.ownerAccount")
+      : t("chrome.tenantAccount");
   const signingOut    = signOutMutation.isPending;
   const dashboardHref = session.role === "OWNER" ? "/owner/dashboard" : "/tenant/dashboard";
   const secondaryHref  = session.role === "OWNER" ? "/payments" : "/search";
-  const secondaryLabel = session.role === "OWNER" ? "Collections" : "Explore";
+  const secondaryLabel = session.role === "OWNER" ? t("chrome.collections") : t("nav.search");
 
   return (
     <>
@@ -178,7 +177,7 @@ function HeaderAccountActions() {
           onClick={() => signOutMutation.mutate()}
           type="button"
         >
-          {signingOut ? "Signing out…" : "Sign out"}
+          {signingOut ? `${t("nav.signOut")}…` : t("nav.signOut")}
         </button>
       </div>
 
@@ -200,7 +199,7 @@ function HeaderAccountActions() {
           onClick={() => signOutMutation.mutate()}
           type="button"
         >
-          {signingOut ? "Signing out…" : "Sign out"}
+          {signingOut ? `${t("nav.signOut")}…` : t("nav.signOut")}
         </button>
       </div>
     </>
@@ -227,7 +226,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
                   Rent and Beyond
                 </p>
                 <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.36em] text-ink/46">
-                  Trust-first rental only
+                  {t("chrome.brandTagline")}
                 </p>
               </div>
             </Link>

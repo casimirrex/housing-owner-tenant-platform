@@ -16,6 +16,7 @@ import {
   activateOwnerPremium
 } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth-store";
+import { useTranslation } from "@/lib/i18n/use-translation";
 import { OwnerAnalyticsPanel } from "@/components/sections/owner-analytics-panel";
 import { OwnerVerificationPanel } from "@/components/sections/owner-verification-panel";
 import { OwnerLeadsPanel } from "@/components/sections/owner-leads-panel";
@@ -46,6 +47,7 @@ function formatCurrency(value: number) {
 export function OwnerDashboardExperience() {
   const queryClient = useQueryClient();
   const { session } = useAuthStore();
+  const { t } = useTranslation();
   const accessToken = session?.accessToken;
 
   const [paymentMsg, setPaymentMsg]     = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -352,14 +354,14 @@ export function OwnerDashboardExperience() {
         {ownerPremium ? (
           <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_1fr_auto]">
             <div className="soft-panel">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-copper">Plan</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-copper">{t("owner.plan")}</p>
               <p className="mt-2 text-lg font-semibold text-ink">{ownerPremium.planName}</p>
               <p className="mt-1 text-sm text-ink/64">
                 {formatCurrency(ownerPremium.priceAmount)} · {ownerPremium.billingPeriod.toLowerCase()}
               </p>
             </div>
             <div className="soft-panel">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-copper">Wallet</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-copper">{t("nav.wallet")}</p>
               <p className="mt-2 text-lg font-semibold text-ink">
                 {ownerPremium.walletBalanceFormatted}
               </p>
@@ -373,7 +375,7 @@ export function OwnerDashboardExperience() {
             <div className="flex flex-col justify-center gap-3 lg:min-w-56">
               {ownerPremium.premiumActive ? (
                 <Link className="button-primary justify-center" href="/owner/listings/new">
-                  Add property
+                  {t("owner.addProperty")}
                 </Link>
               ) : (
                 <button
@@ -397,10 +399,10 @@ export function OwnerDashboardExperience() {
 
       <section className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Live homes", value: publishedCount, icon: Building2 },
-          { label: "Draft homes", value: draftCount, icon: Layers3 },
-          { label: "Rent potential", value: formatCurrency(liveRentPotential), icon: IndianRupee },
-          { label: "Listings with payments", value: ownerOverview?.listingsCovered ?? 0, icon: Wallet }
+          { label: t("owner.liveHomes"), value: publishedCount, icon: Building2 },
+          { label: t("owner.draftHomes"), value: draftCount, icon: Layers3 },
+          { label: t("owner.rentPotential"), value: formatCurrency(liveRentPotential), icon: IndianRupee },
+          { label: t("owner.listingsWithPayments"), value: ownerOverview?.listingsCovered ?? 0, icon: Wallet }
         ].map((metric) => (
           <div className="section-panel" key={metric.label}>
             <metric.icon className="h-5 w-5 text-copper" />
@@ -415,31 +417,23 @@ export function OwnerDashboardExperience() {
       <section className="mt-8 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
         <div className="section-panel">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-copper">
-            Add property
+            {t("owner.addPropertyEyebrow")}
           </p>
-          <h2 className="mt-2 text-2xl font-semibold text-ink">Use the dedicated owner publishing page</h2>
+          <h2 className="mt-2 text-2xl font-semibold text-ink">{t("owner.useDedicatedPage")}</h2>
           <p className="mt-3 text-sm leading-6 text-ink/72">
-            The dashboard is now focused on management. When you want to publish a property, open
-            the dedicated owner page built for property details, pricing, amenities, and renter-side
-            visibility.
+            {t("owner.useDedicatedPageBody")}
           </p>
           <div className="mt-6 grid gap-4">
-            {[
-              "Start from a cleaner owner-only property form.",
-              "Publish into renter discovery without leaving owner space.",
-              "Return here after publishing to manage live inventory and tenant payments."
-            ].map((item) => (
-              <div className="soft-panel" key={item}>
-                <p className="text-sm leading-6 text-ink/74">{item}</p>
-              </div>
-            ))}
+            <div className="soft-panel">
+              <p className="text-sm leading-6 text-ink/74">{t("owner.startFromOwnerForm")}</p>
+            </div>
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link className="button-primary" href="/owner/listings/new">
-              Open add property page
+              {t("owner.openOwnerForm")}
             </Link>
             <Link className="button-secondary" href="/search">
-              See renter discovery
+              {t("nav.search")}
             </Link>
           </div>
         </div>
@@ -448,9 +442,9 @@ export function OwnerDashboardExperience() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-copper">
-                Active listing flow
+                {t("owner.activeListingFlowSubtitle")}
               </p>
-              <h2 className="mt-2 text-2xl font-semibold text-ink">Manage what tenants will see next</h2>
+              <h2 className="mt-2 text-2xl font-semibold text-ink">{t("owner.activeListingFlow")}</h2>
             </div>
             <Sparkles className="h-5 w-5 text-copper" />
           </div>
