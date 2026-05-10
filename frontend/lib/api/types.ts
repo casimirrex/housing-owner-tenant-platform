@@ -760,6 +760,72 @@ export interface AlertsSummaryResponse {
   summary: string;
 }
 
+/* ── Tier 3: Unified notifications ───────────────────────────────────── */
+
+export type NotificationType =
+  | "SAVED_SEARCH"
+  | "MAINTENANCE_UPDATE"
+  | "LEAD_REQUEST"
+  | "VISIT_UPDATE"
+  | "OWNER_REVIEW"
+  | "LISTING_REPORT";
+
+export interface NotificationItem {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  href: string;
+  createdAt: string;
+  read: boolean;
+  priority: "LOW" | "NORMAL" | "HIGH";
+}
+
+export interface NotificationsResponse {
+  items: NotificationItem[];
+  totalCount: number;
+  unreadCount: number;
+}
+
+/* ── Tier 3: Tenant lease tracker ────────────────────────────────────── */
+
+export type LeaseStatus = "ACTIVE" | "ENDED" | "TERMINATED";
+
+export interface LeaseCreateBody {
+  listingId: string;
+  startDate: string;
+  endDate: string;
+  monthlyRent: number;
+  securityDeposit: number;
+  documentUrl?: string;
+  notes?: string;
+}
+
+export interface LeaseItem {
+  leaseId: string;
+  tenantId: string;
+  tenantName: string;
+  listingId: string;
+  listingTitle: string;
+  ownerId: string;
+  ownerName: string;
+  startDate: string;
+  endDate: string;
+  monthlyRent: number;
+  securityDeposit: number;
+  documentUrl: string | null;
+  status: LeaseStatus;
+  notes: string | null;
+  daysUntilEnd: number;
+  createdAt: string;
+}
+
+export interface LeaseListResponse {
+  items: LeaseItem[];
+  totalCount: number;
+  expiringSoonCount: number;
+}
+
 export interface TenantDashboardResponse {
   savedCount: number;
   scheduledVisits: number;

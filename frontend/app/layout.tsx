@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Metadata, Viewport } from "next";
 import { SiteChrome } from "@/components/ui/site-chrome";
 import { ServiceWorkerRegistrar } from "@/components/ui/service-worker-registrar";
+import { OnboardingTour } from "@/components/ui/onboarding-tour";
 import { Providers } from "@/app/providers";
 import "@/app/globals.css";
 
@@ -68,6 +69,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <SiteChrome>{children}</SiteChrome>
         </Providers>
         <ServiceWorkerRegistrar />
+        <OnboardingTour />
       </body>
     </html>
   );

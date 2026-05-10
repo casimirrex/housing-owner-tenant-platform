@@ -9,6 +9,7 @@ import { logoutSession } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth-store";
 import { RoleSwitcher } from "@/components/ui/role-switcher";
 import { CompareFloatingBar } from "@/components/ui/compare-floating-bar";
+import { LocaleSwitcher } from "@/components/ui/locale-switcher";
 
 const guestNavItems = [
   { href: "/search",           label: "Search" },
@@ -239,6 +240,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
             </nav>
 
             <div className="flex items-center gap-3">
+              <LocaleSwitcher />
               <RoleSwitcher />
               <HeaderAccountActions />
             </div>

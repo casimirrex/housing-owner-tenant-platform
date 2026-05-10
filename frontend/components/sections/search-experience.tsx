@@ -60,6 +60,12 @@ export function SearchExperience({
   const [nearbyError, setNearbyError] = useState<string | null>(null);
   const [nearbyRadius, setNearbyRadius] = useState(5);
 
+  // Tier 3: advanced filters
+  const [draftAmenities, setDraftAmenities] = useState<string[]>([]);
+  const [draftAreaMin, setDraftAreaMin] = useState("");
+  const [draftAreaMax, setDraftAreaMax] = useState("");
+  const [draftPostedWithin, setDraftPostedWithin] = useState<string>("");
+
   const findNearMe = (radiusKm = nearbyRadius) => {
     if (typeof window === "undefined" || !navigator.geolocation) {
       setNearbyError("Your browser does not support location access.");
@@ -134,8 +140,24 @@ export function SearchExperience({
     queryFn: () => getFilterMetadata(city)
   });
 
+  const amenitiesParam = draftAmenities.length > 0 ? draftAmenities.join(",") : undefined;
+  const areaMinParam = draftAreaMin ? Number(draftAreaMin) : undefined;
+  const areaMaxParam = draftAreaMax ? Number(draftAreaMax) : undefined;
+  const postedWithinParam = draftPostedWithin ? Number(draftPostedWithin) : undefined;
+
   const searchQuery = useQuery({
-    queryKey: ["search-results", city, query, budgetMax, bhk, verified],
+    queryKey: [
+      "search-results",
+      city,
+      query,
+      budgetMax,
+      bhk,
+      verified,
+      amenitiesParam,
+      areaMinParam,
+      areaMaxParam,
+      postedWithinParam
+    ],
     queryFn: () =>
       searchListings({
         city,
@@ -143,6 +165,10 @@ export function SearchExperience({
         budgetMax,
         bhk,
         verified,
+        amenities: amenitiesParam,
+        areaMin: areaMinParam,
+        areaMax: areaMaxParam,
+        postedWithinDays: postedWithinParam,
         page: 0,
         pageSize: 9
       })
@@ -285,6 +311,74 @@ export function SearchExperience({
                 value={draftBudgetMax}
               />
             </label>
+            {/* Tier 3: amenities multi-select */}
+            <fieldset className="rounded-2xl border border-black/8 bg-white/70 px-4 py-3">
+              <legend className="px-2 text-[11px] font-bold uppercase tracking-[0.18em] text-copper">
+                Amenities
+              </legend>
+              <div className="mt-2 grid grid-cols-2 gap-1.5 text-xs">
+                {AMENITY_OPTIONS.map((amenity) => {
+                  const checked = draftAmenities.includes(amenity);
+                  return (
+                    <label key={amenity} className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(event) =>
+                          setDraftAmenities((current) =>
+                            event.target.checked
+                              ? [...current, amenity]
+                              : current.filter((a) => a !== amenity)
+                          )
+                        }
+                      />
+                      {amenity}
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            {/* Tier 3: area range */}
+            <div className="grid grid-cols-2 gap-3">
+              <label className="field-label">
+                Area min (sqft)
+                <input
+                  type="number"
+                  className="form-control mt-2"
+                  placeholder="600"
+                  value={draftAreaMin}
+                  onChange={(event) => setDraftAreaMin(event.target.value)}
+                />
+              </label>
+              <label className="field-label">
+                Area max (sqft)
+                <input
+                  type="number"
+                  className="form-control mt-2"
+                  placeholder="1500"
+                  value={draftAreaMax}
+                  onChange={(event) => setDraftAreaMax(event.target.value)}
+                />
+              </label>
+            </div>
+
+            {/* Tier 3: posted-within */}
+            <label className="field-label">
+              Posted within
+              <select
+                className="form-control mt-2"
+                value={draftPostedWithin}
+                onChange={(event) => setDraftPostedWithin(event.target.value)}
+              >
+                <option value="">Any time</option>
+                <option value="1">Last 24 hours</option>
+                <option value="7">Last 7 days</option>
+                <option value="14">Last 2 weeks</option>
+                <option value="30">Last 30 days</option>
+              </select>
+            </label>
+
             <label className="flex items-center gap-3 rounded-2xl border border-black/8 bg-white/70 px-4 py-3 text-sm text-ink/75">
               <input
                 checked={verified ?? false}
@@ -498,3 +592,17 @@ export function SearchExperience({
     </main>
   );
 }
+
+// Tier 3: top amenities to expose as multi-select filters. Backend matches
+// these case-insensitively against listing_amenities.amenity, so they need
+// to align with what data.sql / the create-listing form puts in there.
+const AMENITY_OPTIONS = [
+  "Parking",
+  "Lift",
+  "Power Backup",
+  "Gym",
+  "Swimming Pool",
+  "Security",
+  "WiFi",
+  "AC"
+];

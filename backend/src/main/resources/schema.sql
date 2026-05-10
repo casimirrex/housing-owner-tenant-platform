@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS tenant_leases CASCADE;
 DROP TABLE IF EXISTS roommate_profiles CASCADE;
 DROP TABLE IF EXISTS listing_templates CASCADE;
 DROP TABLE IF EXISTS maintenance_requests CASCADE;
@@ -1016,3 +1017,25 @@ CREATE TABLE roommate_profiles (
   CONSTRAINT uniq_roommate_profile_per_user UNIQUE (user_id)
 );
 CREATE INDEX idx_roommate_profiles_city ON roommate_profiles(city, active);
+
+-- ─── Tier 3: tenant lease tracker ────────────────────────────────────────
+
+CREATE TABLE tenant_leases (
+  lease_id        VARCHAR(64) PRIMARY KEY,
+  tenant_id       VARCHAR(64) NOT NULL REFERENCES users(user_id)       ON DELETE CASCADE,
+  listing_id      VARCHAR(64) NOT NULL REFERENCES listings(listing_id) ON DELETE CASCADE,
+  owner_id        VARCHAR(64) NOT NULL REFERENCES users(user_id)       ON DELETE CASCADE,
+  start_date      DATE NOT NULL,
+  end_date        DATE NOT NULL,
+  monthly_rent    INTEGER NOT NULL CHECK (monthly_rent > 0),
+  security_deposit INTEGER NOT NULL DEFAULT 0,
+  document_url    TEXT,
+  status          TEXT NOT NULL DEFAULT 'ACTIVE'
+                    CHECK (status IN ('ACTIVE','ENDED','TERMINATED')),
+  notes           TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK (end_date > start_date)
+);
+CREATE INDEX idx_tenant_leases_tenant ON tenant_leases(tenant_id, status, end_date);
+CREATE INDEX idx_tenant_leases_owner  ON tenant_leases(owner_id, status, end_date);

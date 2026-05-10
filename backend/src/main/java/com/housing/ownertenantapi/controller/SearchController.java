@@ -47,13 +47,20 @@ public class SearchController {
       @RequestParam(required = false) String tenantType,
       @RequestParam(required = false) Boolean petFriendly,
       @RequestParam(required = false) Boolean verified,
+      @Parameter(description = "Comma-separated amenities (e.g. \"Parking,Lift,Power Backup\")")
+      @RequestParam(required = false) String amenities,
+      @RequestParam(required = false) Integer areaMin,
+      @RequestParam(required = false) Integer areaMax,
+      @Parameter(description = "Only listings posted within the last N days (e.g. 7, 30)")
+      @RequestParam(required = false) Integer postedWithinDays,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int pageSize,
       @RequestParam(defaultValue = "relevance") String sortBy
   ) {
     return searchService.search(
         query, city, budgetMin, budgetMax, bhk, furnishing, tenantType, petFriendly,
-        verified, page, pageSize, sortBy
+        verified, amenities, areaMin, areaMax, postedWithinDays,
+        page, pageSize, sortBy
     );
   }
 

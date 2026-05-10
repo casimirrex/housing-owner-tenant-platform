@@ -50,12 +50,38 @@ public class SearchService {
       int pageSize,
       String sortBy
   ) {
+    return search(
+        query, city, budgetMin, budgetMax, bhk, furnishing, tenantType, petFriendly,
+        verified, null, null, null, null, page, pageSize, sortBy
+    );
+  }
+
+  /** Tier 3: extended search with amenities CSV, area range, and posted-within filter. */
+  public SearchResponse search(
+      String query,
+      String city,
+      Integer budgetMin,
+      Integer budgetMax,
+      String bhk,
+      String furnishing,
+      String tenantType,
+      Boolean petFriendly,
+      Boolean verified,
+      String amenitiesCsv,
+      Integer areaMin,
+      Integer areaMax,
+      Integer postedWithinDays,
+      int page,
+      int pageSize,
+      String sortBy
+  ) {
     int safePage = sanitizePage(page);
     int safePageSize = sanitizePageSize(pageSize);
     String resolvedSort = sortBy == null || sortBy.isBlank() ? "relevance" : sortBy;
 
     SqlBundle searchBundle = buildSearchBundle(
-        query, city, budgetMin, budgetMax, bhk, furnishing, tenantType, petFriendly, verified
+        query, city, budgetMin, budgetMax, bhk, furnishing, tenantType, petFriendly, verified,
+        amenitiesCsv, areaMin, areaMax, postedWithinDays
     );
     long totalItems = jdbcTemplate.queryForObject(
         "SELECT COUNT(*) " + searchBundle.fromClause(),
@@ -348,6 +374,28 @@ public class SearchService {
       Boolean petFriendly,
       Boolean verified
   ) {
+    return buildSearchBundle(
+        query, city, budgetMin, budgetMax, bhk, furnishing, tenantType, petFriendly, verified,
+        null, null, null, null
+    );
+  }
+
+  /** Tier 3: extended bundle with amenities CSV, area range, posted-within filter. */
+  private SqlBundle buildSearchBundle(
+      String query,
+      String city,
+      Integer budgetMin,
+      Integer budgetMax,
+      String bhk,
+      String furnishing,
+      String tenantType,
+      Boolean petFriendly,
+      Boolean verified,
+      String amenitiesCsv,
+      Integer areaMin,
+      Integer areaMax,
+      Integer postedWithinDays
+  ) {
     String resolvedCity = CityCatalog.canonicalize(city);
     StringBuilder fromClause = new StringBuilder("""
         FROM listings
@@ -408,6 +456,40 @@ public class SearchService {
     if (verified != null) {
       fromClause.append(" AND verified = ?");
       parameters.add(verified);
+    }
+
+    // Tier 3: amenities. Multi-select — every requested amenity must be
+    // present on the listing (AND-of-any). Uses a correlated EXISTS against
+    // the listing_amenities join table for each amenity.
+    if (amenitiesCsv != null && !amenitiesCsv.isBlank()) {
+      String[] amenityNames = amenitiesCsv.split(",");
+      for (String raw : amenityNames) {
+        String amenity = raw == null ? "" : raw.trim();
+        if (amenity.isEmpty()) continue;
+        fromClause.append(
+            " AND EXISTS (SELECT 1 FROM listing_amenities a " +
+            "             WHERE a.listing_id = listings.listing_id " +
+            "               AND lower(a.amenity) = lower(?))"
+        );
+        parameters.add(amenity);
+      }
+    }
+
+    // Tier 3: area range (sq ft).
+    if (areaMin != null) {
+      fromClause.append(" AND area_sq_ft >= ?");
+      parameters.add(areaMin);
+    }
+    if (areaMax != null) {
+      fromClause.append(" AND area_sq_ft <= ?");
+      parameters.add(areaMax);
+    }
+
+    // Tier 3: only show listings created within the last N days.
+    if (postedWithinDays != null && postedWithinDays > 0) {
+      fromClause.append(" AND created_at >= now() - INTERVAL '")
+          .append(Math.min(postedWithinDays, 365))
+          .append(" days'");
     }
 
     return new SqlBundle(fromClause.toString(), parameters);

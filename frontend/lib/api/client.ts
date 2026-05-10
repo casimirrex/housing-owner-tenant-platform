@@ -16,6 +16,11 @@ import type {
   MatchesResponse,
   LogoutResponse,
   NearbyResponse,
+  NotificationsResponse,
+  LeaseCreateBody,
+  LeaseItem,
+  LeaseListResponse,
+  LeaseStatus,
   ListingTemplateCreateBody,
   ListingTemplateItem,
   ListingTemplateListResponse,
@@ -242,6 +247,47 @@ export function searchNearby(lat: number, lng: number, radiusKm = 5) {
     lng,
     radiusKm
   });
+}
+
+export function getNotifications(accessToken?: string) {
+  return fetchJson<NotificationsResponse>(
+    "/api/v1/notifications",
+    undefined,
+    {},
+    accessToken
+  );
+}
+
+/* ── Tier 3: Tenant lease tracker ─────────────────────────────────────── */
+
+export function listMyLeases(accessToken?: string) {
+  return fetchJson<LeaseListResponse>("/api/v1/leases/me", undefined, {}, accessToken);
+}
+
+export function listOwnerLeases(accessToken?: string) {
+  return fetchJson<LeaseListResponse>("/api/v1/leases/owner", undefined, {}, accessToken);
+}
+
+export function createLease(body: LeaseCreateBody, accessToken?: string) {
+  return fetchJson<LeaseItem>(
+    "/api/v1/leases",
+    { method: "POST", body: JSON.stringify(body) },
+    {},
+    accessToken
+  );
+}
+
+export function updateLeaseStatus(
+  leaseId: string,
+  status: LeaseStatus,
+  accessToken?: string
+) {
+  return fetchJson<LeaseItem>(
+    `/api/v1/leases/${leaseId}/status`,
+    { method: "PATCH", body: JSON.stringify({ status }) },
+    {},
+    accessToken
+  );
 }
 
 export function getFilterMetadata(city: string) {
