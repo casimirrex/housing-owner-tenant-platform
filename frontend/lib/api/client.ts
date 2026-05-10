@@ -258,6 +258,141 @@ export function getNotifications(accessToken?: string) {
   );
 }
 
+/* ── Phase 1: account privacy (DPDP) ──────────────────────────────────── */
+
+export function requestAccountDeletion(reason: string | undefined, accessToken?: string) {
+  return fetchJson<Record<string, unknown>>(
+    "/api/v1/account/deletion",
+    { method: "POST", body: JSON.stringify({ reason }) },
+    {},
+    accessToken
+  );
+}
+
+export function getDeletionStatus(accessToken?: string) {
+  return fetchJson<Record<string, unknown>>(
+    "/api/v1/account/deletion",
+    undefined,
+    {},
+    accessToken
+  );
+}
+
+export function cancelDeletion(accessToken?: string) {
+  return fetchJson<void>(
+    "/api/v1/account/deletion",
+    { method: "DELETE" },
+    {},
+    accessToken
+  );
+}
+
+/* ── Phase 1: pricing recommendation ──────────────────────────────────── */
+
+export function getPricingRecommendation(
+  query: { city: string; locality?: string; bhk: string },
+  accessToken?: string
+) {
+  return fetchJson<{
+    city: string;
+    locality: string | null;
+    bhk: string;
+    comparableCount: number;
+    medianRent: number;
+    p25Rent: number;
+    p75Rent: number;
+    summary: string;
+    confidence: "NARROW" | "WIDE" | "INSUFFICIENT_DATA";
+  }>(
+    "/api/v1/owners/listings/pricing-recommendation",
+    undefined,
+    { city: query.city, locality: query.locality, bhk: query.bhk },
+    accessToken
+  );
+}
+
+/* ── Phase 1: cash-flow ───────────────────────────────────────────────── */
+
+export function getOwnerCashflow(accessToken?: string) {
+  return fetchJson<{
+    monthlyExpectedRupees: number;
+    annualExpectedRupees: number;
+    lifetimeBookedRupees: number;
+    activeLeaseCount: number;
+    publishedListingCount: number;
+    upcomingMonths: { month: string; expectedRupees: number }[];
+    byListing: {
+      listingId: string;
+      title: string;
+      locality: string;
+      monthlyRent: number;
+      status: string;
+      leasedNow: boolean;
+    }[];
+  }>("/api/v1/owners/listings/analytics/cashflow", undefined, {}, accessToken);
+}
+
+/* ── Phase 1: admin refunds + audit log ───────────────────────────────── */
+
+export function adminIssueRefund(
+  body: { userId: string; amountRupees: number; reason: string; referencePayment?: string },
+  accessToken?: string
+) {
+  return fetchJson<{
+    refundId: string;
+    userId: string;
+    amountRupees: number;
+    reason: string;
+    newWalletBalanceRupees: number;
+    createdAt: string;
+  }>(
+    "/api/v1/admin/refunds",
+    { method: "POST", body: JSON.stringify(body) },
+    {},
+    accessToken
+  );
+}
+
+export function adminListRefunds(limit = 50, accessToken?: string) {
+  return fetchJson<Array<Record<string, unknown>>>(
+    "/api/v1/admin/refunds",
+    undefined,
+    { limit },
+    accessToken
+  );
+}
+
+export function adminListAuditLog(
+  query: { action?: string; page?: number; pageSize?: number },
+  accessToken?: string
+) {
+  return fetchJson<{
+    items: Array<{
+      auditId: string;
+      actorUserId: string;
+      actorName: string;
+      actorRole: string;
+      action: string;
+      entityType: string;
+      entityId: string;
+      payload: string | null;
+      createdAt: string;
+    }>;
+    totalCount: number;
+    page: number;
+    pageSize: number;
+  }>(
+    "/api/v1/admin/audit-log",
+    undefined,
+    {
+      action: query.action,
+      page: query.page ?? 0,
+      pageSize: query.pageSize ?? 50
+    },
+    accessToken
+  );
+}
+
 /* ── Tier 3: Tenant lease tracker ─────────────────────────────────────── */
 
 export function listMyLeases(accessToken?: string) {

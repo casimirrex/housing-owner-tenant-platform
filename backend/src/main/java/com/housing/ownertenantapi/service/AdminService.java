@@ -9,6 +9,8 @@ import com.housing.ownertenantapi.dto.AdminReportsResponse;
 import com.housing.ownertenantapi.dto.AdminStatsResponse;
 import com.housing.ownertenantapi.dto.AdminUserItem;
 import com.housing.ownertenantapi.dto.AdminUsersResponse;
+import com.housing.ownertenantapi.dto.AuditLogItem;
+import com.housing.ownertenantapi.dto.AuditLogResponse;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,9 +33,11 @@ public class AdminService {
   private static final Logger log = LoggerFactory.getLogger(AdminService.class);
 
   private final JdbcTemplate jdbcTemplate;
+  private final AuditLogService auditLogService;
 
-  public AdminService(JdbcTemplate jdbcTemplate) {
+  public AdminService(JdbcTemplate jdbcTemplate, AuditLogService auditLogService) {
     this.jdbcTemplate = jdbcTemplate;
+    this.auditLogService = auditLogService;
   }
 
   public AdminStatsResponse getStats() {
@@ -202,6 +206,9 @@ public class AdminService {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found: " + reportId);
     }
     log.info("admin action on report {} → {} by {}", reportId, request.status(), adminUserId);
+    auditLogService.record(adminUserId, "ADMIN", "REPORT_" + request.status(),
+        "listing_report", reportId,
+        request.resolutionNote() == null ? null : "note=" + request.resolutionNote());
     return queryReports(" WHERE r.report_id = ?", reportId).stream()
         .findFirst()
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -219,6 +226,49 @@ public class AdminService {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Listing not found: " + listingId);
     }
     log.info("admin moderated listing {} → {} by {}", listingId, request.status(), adminUserId);
+    auditLogService.record(adminUserId, "ADMIN", "LISTING_STATUS_" + request.status(),
+        "listing", listingId, null);
+  }
+
+  public AuditLogResponse listAuditLog(String action, int page, int pageSize) {
+    int safePage = Math.max(page, 0);
+    int safePageSize = Math.min(Math.max(pageSize, 1), 200);
+
+    long totalCount;
+    java.util.List<AuditLogItem> items;
+    if (action != null && !action.isBlank()) {
+      totalCount = countOrZero("SELECT COUNT(*) FROM audit_log WHERE action = ?", action);
+      items = queryAudit(" WHERE a.action = ? ORDER BY a.created_at DESC LIMIT ? OFFSET ?",
+          action, safePageSize, safePage * safePageSize);
+    } else {
+      totalCount = countOrZero("SELECT COUNT(*) FROM audit_log");
+      items = queryAudit(" ORDER BY a.created_at DESC LIMIT ? OFFSET ?",
+          safePageSize, safePage * safePageSize);
+    }
+    return new AuditLogResponse(items, totalCount, safePage, safePageSize);
+  }
+
+  private java.util.List<AuditLogItem> queryAudit(String whereOrder, Object... args) {
+    return jdbcTemplate.query(
+        "SELECT a.audit_id, a.actor_user_id, COALESCE(u.full_name, '') AS actor_name, " +
+            "a.actor_role, a.action, a.entity_type, a.entity_id, a.payload, " +
+            "to_char(a.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS created_at " +
+            "FROM audit_log a " +
+            "LEFT JOIN users u ON u.user_id = a.actor_user_id " +
+            whereOrder,
+        (rs, rowNum) -> new AuditLogItem(
+            rs.getString("audit_id"),
+            rs.getString("actor_user_id"),
+            rs.getString("actor_name"),
+            rs.getString("actor_role"),
+            rs.getString("action"),
+            rs.getString("entity_type"),
+            rs.getString("entity_id"),
+            rs.getString("payload"),
+            rs.getString("created_at")
+        ),
+        args
+    );
   }
 
   /* ── helpers ─────────────────────────────────────────────────────────── */

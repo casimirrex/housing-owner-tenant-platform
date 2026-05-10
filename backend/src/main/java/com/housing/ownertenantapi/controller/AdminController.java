@@ -7,9 +7,13 @@ import com.housing.ownertenantapi.dto.AdminReportItem;
 import com.housing.ownertenantapi.dto.AdminReportsResponse;
 import com.housing.ownertenantapi.dto.AdminStatsResponse;
 import com.housing.ownertenantapi.dto.AdminUsersResponse;
+import com.housing.ownertenantapi.dto.AdminRefundRequest;
+import com.housing.ownertenantapi.dto.AdminRefundResponse;
 import com.housing.ownertenantapi.service.AdminService;
 import com.housing.ownertenantapi.service.CurrentSessionService;
+import com.housing.ownertenantapi.service.RefundService;
 import com.housing.ownertenantapi.service.StaleListingArchiver;
+import java.util.List;
 import java.util.Map;
 import com.housing.ownertenantapi.service.CurrentSessionService.SessionIdentity;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,15 +46,18 @@ public class AdminController {
   private final AdminService adminService;
   private final CurrentSessionService currentSessionService;
   private final StaleListingArchiver staleListingArchiver;
+  private final RefundService refundService;
 
   public AdminController(
       AdminService adminService,
       CurrentSessionService currentSessionService,
-      StaleListingArchiver staleListingArchiver
+      StaleListingArchiver staleListingArchiver,
+      RefundService refundService
   ) {
     this.adminService = adminService;
     this.currentSessionService = currentSessionService;
     this.staleListingArchiver = staleListingArchiver;
+    this.refundService = refundService;
   }
 
   @GetMapping("/stats")
@@ -121,6 +128,38 @@ public class AdminController {
   ) {
     SessionIdentity admin = requireAdmin(authorizationHeader);
     return adminService.actOnReport(reportId, admin.userId(), request);
+  }
+
+  @PostMapping("/refunds")
+  @Operation(summary = "Issue a wallet refund to a user (admin only)")
+  public AdminRefundResponse issueRefund(
+      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+      @jakarta.validation.Valid @RequestBody AdminRefundRequest request
+  ) {
+    SessionIdentity admin = requireAdmin(authorizationHeader);
+    return refundService.issueRefund(admin.userId(), request);
+  }
+
+  @GetMapping("/refunds")
+  @Operation(summary = "List recent refunds")
+  public List<Map<String, Object>> listRefunds(
+      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+      @RequestParam(defaultValue = "50") int limit
+  ) {
+    requireAdmin(authorizationHeader);
+    return refundService.listRefunds(limit);
+  }
+
+  @GetMapping("/audit-log")
+  @Operation(summary = "Read the platform audit trail")
+  public com.housing.ownertenantapi.dto.AuditLogResponse listAuditLog(
+      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+      @RequestParam(required = false) String action,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "50") int pageSize
+  ) {
+    requireAdmin(authorizationHeader);
+    return adminService.listAuditLog(action, page, pageSize);
   }
 
   @PostMapping("/maintenance/sweep-stale-listings")

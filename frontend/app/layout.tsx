@@ -5,6 +5,7 @@ import { ServiceWorkerRegistrar } from "@/components/ui/service-worker-registrar
 import { OnboardingTour } from "@/components/ui/onboarding-tour";
 import { HtmlLangSync } from "@/components/ui/html-lang-sync";
 import { AutoTranslator } from "@/components/ui/auto-translator";
+import { CookieConsent } from "@/components/ui/cookie-consent";
 import { Providers } from "@/app/providers";
 import "@/app/globals.css";
 
@@ -74,6 +75,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <OnboardingTour />
         <HtmlLangSync />
         <AutoTranslator />
+        <CookieConsent />
       </body>
     </html>
   );

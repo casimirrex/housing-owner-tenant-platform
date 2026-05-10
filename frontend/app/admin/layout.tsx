@@ -7,6 +7,8 @@ import {
   BarChart3,
   Flag,
   Home,
+  IndianRupee,
+  ScrollText,
   ShieldCheck,
   Users
 } from "lucide-react";
@@ -56,7 +58,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     { href: "/admin", label: "Overview", icon: BarChart3 },
     { href: "/admin/users", label: "Users", icon: Users },
     { href: "/admin/listings", label: "Listings", icon: Home },
-    { href: "/admin/reports", label: "Reports", icon: Flag }
+    { href: "/admin/reports", label: "Reports", icon: Flag },
+    { href: "/admin/refunds", label: "Refunds", icon: IndianRupee },
+    { href: "/admin/audit-log", label: "Audit log", icon: ScrollText }
   ];
 
   return (

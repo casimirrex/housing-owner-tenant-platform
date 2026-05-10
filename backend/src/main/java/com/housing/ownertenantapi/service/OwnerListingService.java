@@ -615,6 +615,135 @@ public class OwnerListingService {
     return escaped;
   }
 
+  /* ── Phase 1: multi-property cash-flow ───────────────────────────────── */
+
+  public com.housing.ownertenantapi.dto.OwnerCashflowResponse cashflowOverview(
+      String authorizationHeader
+  ) {
+    String ownerUserId = currentSessionService.requireUserId(authorizationHeader);
+
+    // Active leases on the owner's listings → monthly rent stream.
+    java.util.List<java.util.Map<String, Object>> leases = jdbcTemplate.queryForList("""
+            SELECT lease_id, monthly_rent, start_date, end_date, listing_id
+            FROM tenant_leases
+            WHERE owner_id = ? AND status = 'ACTIVE'
+            """, ownerUserId);
+
+    long monthlyExpectedRupees = 0;
+    long lifetimeBookedRupees = 0;
+    java.time.LocalDate today = java.time.LocalDate.now();
+    for (var l : leases) {
+      long monthlyRent = ((Number) l.get("monthly_rent")).longValue();
+      java.sql.Date end = (java.sql.Date) l.get("end_date");
+      java.time.LocalDate endDate = end.toLocalDate();
+      long monthsLeft = Math.max(0,
+          java.time.temporal.ChronoUnit.MONTHS.between(today, endDate));
+      monthlyExpectedRupees += monthlyRent;
+      lifetimeBookedRupees += monthlyRent * monthsLeft;
+    }
+
+    long annualExpectedRupees = monthlyExpectedRupees * 12;
+
+    java.util.List<com.housing.ownertenantapi.dto.OwnerCashflowResponse.ListingContribution> byListing =
+        jdbcTemplate.query("""
+                SELECT l.listing_id, l.title, l.locality, l.rent, l.status,
+                       EXISTS(SELECT 1 FROM tenant_leases t
+                              WHERE t.listing_id = l.listing_id AND t.status = 'ACTIVE') AS leased
+                FROM listings l
+                WHERE l.owner_id = ?
+                ORDER BY l.created_at DESC
+                """,
+            (rs, rowNum) -> new com.housing.ownertenantapi.dto.OwnerCashflowResponse.ListingContribution(
+                rs.getString("listing_id"),
+                rs.getString("title"),
+                rs.getString("locality"),
+                rs.getLong("rent"),
+                rs.getString("status"),
+                rs.getBoolean("leased")
+            ),
+            ownerUserId
+        );
+
+    java.util.List<com.housing.ownertenantapi.dto.OwnerCashflowResponse.MonthlyBucket> upcoming = new java.util.ArrayList<>();
+    java.time.format.DateTimeFormatter monthFmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM");
+    for (int i = 0; i < 12; i++) {
+      java.time.LocalDate m = today.plusMonths(i);
+      upcoming.add(new com.housing.ownertenantapi.dto.OwnerCashflowResponse.MonthlyBucket(
+          monthFmt.format(m), monthlyExpectedRupees
+      ));
+    }
+
+    int publishedCount = (int) byListing.stream().filter(b -> "PUBLISHED".equals(b.status())).count();
+    return new com.housing.ownertenantapi.dto.OwnerCashflowResponse(
+        monthlyExpectedRupees, annualExpectedRupees, lifetimeBookedRupees,
+        leases.size(), publishedCount, upcoming, byListing
+    );
+  }
+
+  /* ── Phase 1: pricing recommendation ─────────────────────────────────── */
+
+  public com.housing.ownertenantapi.dto.PricingRecommendationResponse pricingRecommendation(
+      String city, String locality, String bhk
+  ) {
+    String resolvedCity = com.housing.ownertenantapi.util.CityCatalog.canonicalize(city);
+
+    // Pull comparable listings: same city + bhk; locality match preferred but
+    // not required (if too few in the locality, we widen to whole city).
+    java.util.List<Integer> rentsLocality = jdbcTemplate.queryForList("""
+            SELECT rent FROM listings
+            WHERE status = 'PUBLISHED' AND lower(city) = lower(?)
+              AND lower(locality) = lower(?) AND bhk = ?
+            """, Integer.class, resolvedCity, locality == null ? "" : locality, bhk);
+
+    java.util.List<Integer> rents = rentsLocality.size() >= 5
+        ? rentsLocality
+        : jdbcTemplate.queryForList("""
+                SELECT rent FROM listings
+                WHERE status = 'PUBLISHED' AND lower(city) = lower(?) AND bhk = ?
+                """, Integer.class, resolvedCity, bhk);
+
+    if (rents.size() < 5) {
+      return new com.housing.ownertenantapi.dto.PricingRecommendationResponse(
+          resolvedCity, locality, bhk, rents.size(),
+          0, 0, 0,
+          "Not enough comparable listings yet — need at least 5 for a useful range.",
+          "INSUFFICIENT_DATA"
+      );
+    }
+
+    java.util.List<Integer> sorted = new java.util.ArrayList<>(rents);
+    java.util.Collections.sort(sorted);
+    long median = percentile(sorted, 50);
+    long p25 = percentile(sorted, 25);
+    long p75 = percentile(sorted, 75);
+
+    String confidence = (p75 - p25) * 1.0 / median < 0.4 ? "NARROW" : "WIDE";
+    String summary = String.format(
+        "Median rent for %s in %s is ₹%s. The middle 50%% of listings sit between ₹%s and ₹%s.",
+        bhk,
+        rentsLocality.size() >= 5 ? locality : resolvedCity,
+        formatRupees(median),
+        formatRupees(p25),
+        formatRupees(p75)
+    );
+
+    return new com.housing.ownertenantapi.dto.PricingRecommendationResponse(
+        resolvedCity, locality, bhk, rents.size(), median, p25, p75, summary, confidence
+    );
+  }
+
+  private long percentile(java.util.List<Integer> sortedAsc, int p) {
+    if (sortedAsc.isEmpty()) return 0;
+    int idx = (int) Math.round((p / 100.0) * (sortedAsc.size() - 1));
+    return sortedAsc.get(Math.max(0, Math.min(sortedAsc.size() - 1, idx)));
+  }
+
+  private String formatRupees(long value) {
+    if (value >= 100_000) return String.format("%.1fL", value / 100_000.0);
+    if (value >= 1_000) return Math.round(value / 1_000.0) + "k";
+    return String.valueOf(value);
+  }
+
   /* ── Tier 1: rollup analytics across all owner listings ──────────────── */
 
   public java.util.Map<String, Object> getRollupAnalytics(String authorizationHeader) {

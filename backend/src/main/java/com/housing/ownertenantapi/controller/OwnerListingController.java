@@ -94,6 +94,24 @@ public class OwnerListingController {
         .body(body);
   }
 
+  @GetMapping("/analytics/cashflow")
+  @Operation(summary = "Multi-property cash-flow projection")
+  public com.housing.ownertenantapi.dto.OwnerCashflowResponse cashflow(
+      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader
+  ) {
+    return ownerListingService.cashflowOverview(authorizationHeader);
+  }
+
+  @GetMapping("/pricing-recommendation")
+  @Operation(summary = "Suggest a rent range based on comparable listings (no auth required)")
+  public com.housing.ownertenantapi.dto.PricingRecommendationResponse pricingRecommendation(
+      @RequestParam String city,
+      @RequestParam(required = false) String locality,
+      @RequestParam String bhk
+  ) {
+    return ownerListingService.pricingRecommendation(city, locality, bhk);
+  }
+
   @GetMapping("/analytics/rollup")
   @Operation(summary = "Owner-wide rollup analytics across all listings")
   public Map<String, Object> getRollupAnalytics(

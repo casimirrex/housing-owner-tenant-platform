@@ -1,3 +1,6 @@
+DROP TABLE IF EXISTS account_deletion_requests CASCADE;
+DROP TABLE IF EXISTS wallet_refunds CASCADE;
+DROP TABLE IF EXISTS audit_log CASCADE;
 DROP TABLE IF EXISTS tenant_leases CASCADE;
 DROP TABLE IF EXISTS roommate_profiles CASCADE;
 DROP TABLE IF EXISTS listing_templates CASCADE;
@@ -1039,3 +1042,48 @@ CREATE TABLE tenant_leases (
 );
 CREATE INDEX idx_tenant_leases_tenant ON tenant_leases(tenant_id, status, end_date);
 CREATE INDEX idx_tenant_leases_owner  ON tenant_leases(owner_id, status, end_date);
+
+-- ─── Phase 1: audit log + refunds + DPDP ─────────────────────────────────
+
+CREATE TABLE audit_log (
+  audit_id    VARCHAR(64) PRIMARY KEY,
+  actor_user_id VARCHAR(64) REFERENCES users(user_id) ON DELETE SET NULL,
+  actor_role  TEXT,
+  action      TEXT NOT NULL,
+  entity_type TEXT,
+  entity_id   TEXT,
+  payload     TEXT,
+  ip_address  TEXT,
+  user_agent  TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_audit_log_actor   ON audit_log(actor_user_id, created_at DESC);
+CREATE INDEX idx_audit_log_action  ON audit_log(action, created_at DESC);
+CREATE INDEX idx_audit_log_entity  ON audit_log(entity_type, entity_id, created_at DESC);
+CREATE INDEX idx_audit_log_recent  ON audit_log(created_at DESC);
+
+CREATE TABLE wallet_refunds (
+  refund_id          VARCHAR(64) PRIMARY KEY,
+  user_id            VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  amount_paise       BIGINT NOT NULL CHECK (amount_paise > 0),
+  reason             TEXT NOT NULL,
+  reference_payment  TEXT,
+  initiated_by_admin VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE SET NULL,
+  status             TEXT NOT NULL DEFAULT 'COMPLETED'
+                       CHECK (status IN ('COMPLETED','FAILED')),
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_wallet_refunds_user ON wallet_refunds(user_id, created_at DESC);
+CREATE INDEX idx_wallet_refunds_admin ON wallet_refunds(initiated_by_admin, created_at DESC);
+
+CREATE TABLE account_deletion_requests (
+  request_id   VARCHAR(64) PRIMARY KEY,
+  user_id      VARCHAR(64) NOT NULL UNIQUE REFERENCES users(user_id) ON DELETE CASCADE,
+  reason       TEXT,
+  status       TEXT NOT NULL DEFAULT 'PENDING'
+                 CHECK (status IN ('PENDING','COMPLETED','CANCELLED')),
+  requested_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  completes_at TIMESTAMPTZ NOT NULL,
+  completed_at TIMESTAMPTZ
+);
+CREATE INDEX idx_account_deletion_status ON account_deletion_requests(status, completes_at);
