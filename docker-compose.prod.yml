@@ -25,12 +25,16 @@ services:
         NEXT_PUBLIC_API_BASE_URL: https://${BACKEND_DOMAIN}
         API_BASE_URL_INTERNAL: http://backend:8080
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID}
+        NEXT_PUBLIC_SUPPORT_WHATSAPP: ${NEXT_PUBLIC_SUPPORT_WHATSAPP:-}
+        NEXT_PUBLIC_SITE_URL: https://${FRONTEND_DOMAIN}
     container_name: housing-frontend
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_BASE_URL: https://${BACKEND_DOMAIN}
       API_BASE_URL_INTERNAL: http://backend:8080
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID}
+      NEXT_PUBLIC_SUPPORT_WHATSAPP: ${NEXT_PUBLIC_SUPPORT_WHATSAPP:-}
+      NEXT_PUBLIC_SITE_URL: https://${FRONTEND_DOMAIN}
       HOSTNAME: 0.0.0.0
       PORT: 3000
     depends_on:
