@@ -116,26 +116,26 @@ function HeaderAccountActions() {
         {/* Desktop */}
         <div className="hidden items-center gap-2.5 md:flex">
           <Link className="button-ghost px-4 py-2.5 text-sm" href="/owner/register">
-            List your property
+            {t("auth.listYourProperty")}
           </Link>
           <Link className="button-ghost px-4 py-2.5 text-sm" href="/account/login">
-            Sign in
+            {t("auth.signIn")}
           </Link>
           <Link className="button-primary px-5 py-2.5 text-sm" href="/account/register">
-            Registration
+            {t("auth.registration")}
           </Link>
         </div>
         {/* Mobile */}
         <div className="mt-4 grid gap-2.5 md:hidden">
           <Link className="button-ghost w-full justify-center" href="/owner/register">
-            List your property
+            {t("auth.listYourProperty")}
           </Link>
           <div className="grid grid-cols-2 gap-2.5">
             <Link className="button-ghost justify-center" href="/account/login">
-              Sign in
+              {t("auth.signIn")}
             </Link>
             <Link className="button-primary justify-center" href="/account/register">
-              Registration
+              {t("auth.registration")}
             </Link>
           </div>
         </div>

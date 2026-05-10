@@ -87,6 +87,34 @@ type DictionaryShape = {
   "hero.title": string;
   "hero.subtitle": string;
   "hero.searchCta": string;
+  "hero.eyebrow": string;
+  "hero.ctaSearchHomes": string;
+  "hero.ctaRegistration": string;
+  "hero.ctaListYourHome": string;
+  "hero.cityLive": string;
+  "hero.verifiedPicks": string;
+  "hero.newListings": string;
+  "home.whyEyebrow": string;
+  "home.verifiedHomesTitle": string;
+  "home.verifiedHomesBody": string;
+  "home.cityBasedSearchTitle": string;
+  "home.cityBasedSearchBody": string;
+  "home.guidedSetupTitle": string;
+  "home.guidedSetupBody": string;
+  "home.recommendedProperty": string;
+  "home.match": string;
+  "home.viewProperty": string;
+  "home.exploreCitiesEyebrow": string;
+  "home.exploreCitiesBody": string;
+  "home.featuredHomesEyebrow": string;
+  "home.featuredHomesTitle": string;
+  "home.featuredHomesBody": string;
+  "home.trendingNow": string;
+  "home.freshlyListed": string;
+  // Auth buttons (guest)
+  "auth.listYourProperty": string;
+  "auth.signIn": string;
+  "auth.registration": string;
   // Common
   "common.loading": string;
   "common.error": string;
@@ -155,9 +183,36 @@ export const dictionaries: Dictionary = {
     "tenant.recommended": "Recommended",
     "tenant.profileCompletion": "Profile completion",
     "tenant.alerts": "Alerts",
-    "hero.title": "Find the home that earns your trust",
-    "hero.subtitle": "Verified owners, transparent listings, no broker games.",
+    "hero.title": "Find the right rental without losing time or clarity.",
+    "hero.subtitle": "Search verified homes, register quickly, and continue into onboarding, visits, and payments from one place.",
     "hero.searchCta": "Browse rentals",
+    "hero.eyebrow": "Trust-first rentals",
+    "hero.ctaSearchHomes": "Search homes",
+    "hero.ctaRegistration": "Registration",
+    "hero.ctaListYourHome": "List your home",
+    "hero.cityLive": "City live",
+    "hero.verifiedPicks": "Verified picks",
+    "hero.newListings": "New listings",
+    "home.whyEyebrow": "Why people use Rent and Beyond",
+    "home.verifiedHomesTitle": "Verified homes",
+    "home.verifiedHomesBody": "See trust cues before you spend time on a property.",
+    "home.cityBasedSearchTitle": "City-based search",
+    "home.cityBasedSearchBody": "Start from the city and locality you actually want.",
+    "home.guidedSetupTitle": "Guided setup",
+    "home.guidedSetupBody": "Registration, onboarding, and payments stay connected.",
+    "home.recommendedProperty": "Recommended property",
+    "home.match": "Match",
+    "home.viewProperty": "View property",
+    "home.exploreCitiesEyebrow": "Explore cities",
+    "home.exploreCitiesBody": "Browse the main launch cities, then move into search and property details with the same account and payment journey.",
+    "home.featuredHomesEyebrow": "Featured homes",
+    "home.featuredHomesTitle": "Trending and newly listed homes",
+    "home.featuredHomesBody": "These listing sections are kept simple so you can move quickly from discovery into registration, shortlist, and payment.",
+    "home.trendingNow": "Trending now",
+    "home.freshlyListed": "Freshly listed",
+    "auth.listYourProperty": "List your property",
+    "auth.signIn": "Sign in",
+    "auth.registration": "Registration",
     "common.loading": "Loading…",
     "common.error": "Something went wrong",
     "common.retry": "Try again",
@@ -221,9 +276,36 @@ export const dictionaries: Dictionary = {
     "tenant.recommended": "अनुशंसित",
     "tenant.profileCompletion": "प्रोफ़ाइल पूर्णता",
     "tenant.alerts": "अलर्ट",
-    "hero.title": "वह घर खोजें जो आपका भरोसा कमाए",
-    "hero.subtitle": "सत्यापित मालिक, पारदर्शी लिस्टिंग, कोई दलाल खेल नहीं।",
+    "hero.title": "बिना समय या स्पष्टता खोए सही किराये का घर खोजें।",
+    "hero.subtitle": "सत्यापित घर खोजें, जल्दी पंजीकरण करें, और एक ही जगह से ऑनबोर्डिंग, विज़िट और भुगतान जारी रखें।",
     "hero.searchCta": "किराया देखें",
+    "hero.eyebrow": "भरोसे-पहले किराये",
+    "hero.ctaSearchHomes": "घर खोजें",
+    "hero.ctaRegistration": "पंजीकरण",
+    "hero.ctaListYourHome": "अपना घर सूचीबद्ध करें",
+    "hero.cityLive": "शहर सक्रिय",
+    "hero.verifiedPicks": "सत्यापित पसंद",
+    "hero.newListings": "नई लिस्टिंग",
+    "home.whyEyebrow": "लोग Rent and Beyond क्यों उपयोग करते हैं",
+    "home.verifiedHomesTitle": "सत्यापित घर",
+    "home.verifiedHomesBody": "किसी संपत्ति पर समय बिताने से पहले विश्वास के संकेत देखें।",
+    "home.cityBasedSearchTitle": "शहर-आधारित खोज",
+    "home.cityBasedSearchBody": "उस शहर और इलाके से शुरू करें जो आप वास्तव में चाहते हैं।",
+    "home.guidedSetupTitle": "मार्गदर्शित सेटअप",
+    "home.guidedSetupBody": "पंजीकरण, ऑनबोर्डिंग, और भुगतान जुड़े रहते हैं।",
+    "home.recommendedProperty": "अनुशंसित संपत्ति",
+    "home.match": "मेल",
+    "home.viewProperty": "संपत्ति देखें",
+    "home.exploreCitiesEyebrow": "शहर देखें",
+    "home.exploreCitiesBody": "मुख्य लॉन्च शहरों को ब्राउज़ करें, फिर उसी खाते और भुगतान यात्रा के साथ खोज और संपत्ति विवरण में जाएँ।",
+    "home.featuredHomesEyebrow": "प्रदर्शित घर",
+    "home.featuredHomesTitle": "ट्रेंडिंग और नई सूचीबद्ध घर",
+    "home.featuredHomesBody": "ये लिस्टिंग सेक्शन सरल रखे गए हैं ताकि आप खोज से पंजीकरण, शॉर्टलिस्ट और भुगतान तक जल्दी पहुँच सकें।",
+    "home.trendingNow": "अभी ट्रेंडिंग",
+    "home.freshlyListed": "नई सूचीबद्ध",
+    "auth.listYourProperty": "अपनी संपत्ति सूचीबद्ध करें",
+    "auth.signIn": "साइन इन",
+    "auth.registration": "पंजीकरण",
     "common.loading": "लोड हो रहा है…",
     "common.error": "कुछ गलत हो गया",
     "common.retry": "फिर से कोशिश करें",
@@ -287,9 +369,36 @@ export const dictionaries: Dictionary = {
     "tenant.recommended": "ಶಿಫಾರಸು",
     "tenant.profileCompletion": "ಪ್ರೊಫೈಲ್ ಪೂರ್ಣಗೊಳಿಸುವಿಕೆ",
     "tenant.alerts": "ಎಚ್ಚರಿಕೆಗಳು",
-    "hero.title": "ನಿಮ್ಮ ನಂಬಿಕೆ ಗಳಿಸುವ ಮನೆಯನ್ನು ಹುಡುಕಿ",
-    "hero.subtitle": "ಪರಿಶೀಲಿಸಿದ ಮಾಲೀಕರು, ಪಾರದರ್ಶಕ ಲಿಸ್ಟಿಂಗ್‌ಗಳು, ದಲ್ಲಾಳಿ ಆಟಗಳಿಲ್ಲ.",
+    "hero.title": "ಸಮಯ ಅಥವಾ ಸ್ಪಷ್ಟತೆಯನ್ನು ಕಳೆದುಕೊಳ್ಳದೆ ಸರಿಯಾದ ಬಾಡಿಗೆ ಮನೆಯನ್ನು ಹುಡುಕಿ.",
+    "hero.subtitle": "ಪರಿಶೀಲಿಸಿದ ಮನೆಗಳನ್ನು ಹುಡುಕಿ, ತ್ವರಿತವಾಗಿ ನೋಂದಣಿ ಮಾಡಿ, ಮತ್ತು ಒಂದೇ ಸ್ಥಳದಿಂದ ಆನ್‌ಬೋರ್ಡಿಂಗ್, ಭೇಟಿಗಳು ಮತ್ತು ಪಾವತಿಗಳನ್ನು ಮುಂದುವರಿಸಿ.",
     "hero.searchCta": "ಬಾಡಿಗೆ ಬ್ರೌಸ್ ಮಾಡಿ",
+    "hero.eyebrow": "ನಂಬಿಕೆ-ಮೊದಲ ಬಾಡಿಗೆಗಳು",
+    "hero.ctaSearchHomes": "ಮನೆಗಳನ್ನು ಹುಡುಕಿ",
+    "hero.ctaRegistration": "ನೋಂದಣಿ",
+    "hero.ctaListYourHome": "ನಿಮ್ಮ ಮನೆಯನ್ನು ಪಟ್ಟಿ ಮಾಡಿ",
+    "hero.cityLive": "ನಗರ ಲೈವ್",
+    "hero.verifiedPicks": "ಪರಿಶೀಲಿಸಿದ ಆಯ್ಕೆಗಳು",
+    "hero.newListings": "ಹೊಸ ಲಿಸ್ಟಿಂಗ್‌ಗಳು",
+    "home.whyEyebrow": "ಜನರು Rent and Beyond ಅನ್ನು ಏಕೆ ಬಳಸುತ್ತಾರೆ",
+    "home.verifiedHomesTitle": "ಪರಿಶೀಲಿಸಿದ ಮನೆಗಳು",
+    "home.verifiedHomesBody": "ಒಂದು ಆಸ್ತಿಯ ಮೇಲೆ ಸಮಯ ಕಳೆಯುವ ಮೊದಲು ನಂಬಿಕೆಯ ಸೂಚನೆಗಳನ್ನು ನೋಡಿ.",
+    "home.cityBasedSearchTitle": "ನಗರ ಆಧಾರಿತ ಹುಡುಕಾಟ",
+    "home.cityBasedSearchBody": "ನೀವು ನಿಜವಾಗಿಯೂ ಬಯಸುವ ನಗರ ಮತ್ತು ಪ್ರದೇಶದಿಂದ ಪ್ರಾರಂಭಿಸಿ.",
+    "home.guidedSetupTitle": "ಮಾರ್ಗದರ್ಶಿತ ಸೆಟಪ್",
+    "home.guidedSetupBody": "ನೋಂದಣಿ, ಆನ್‌ಬೋರ್ಡಿಂಗ್ ಮತ್ತು ಪಾವತಿಗಳು ಸಂಪರ್ಕಿತವಾಗಿ ಉಳಿಯುತ್ತವೆ.",
+    "home.recommendedProperty": "ಶಿಫಾರಸು ಮಾಡಿದ ಆಸ್ತಿ",
+    "home.match": "ಹೊಂದಾಣಿಕೆ",
+    "home.viewProperty": "ಆಸ್ತಿ ನೋಡಿ",
+    "home.exploreCitiesEyebrow": "ನಗರಗಳನ್ನು ಅನ್ವೇಷಿಸಿ",
+    "home.exploreCitiesBody": "ಮುಖ್ಯ ಪ್ರಾರಂಭ ನಗರಗಳನ್ನು ಬ್ರೌಸ್ ಮಾಡಿ, ನಂತರ ಅದೇ ಖಾತೆ ಮತ್ತು ಪಾವತಿ ಪ್ರಯಾಣದೊಂದಿಗೆ ಹುಡುಕಾಟ ಮತ್ತು ಆಸ್ತಿ ವಿವರಗಳಿಗೆ ಹೋಗಿ.",
+    "home.featuredHomesEyebrow": "ವಿಶೇಷ ಮನೆಗಳು",
+    "home.featuredHomesTitle": "ಟ್ರೆಂಡಿಂಗ್ ಮತ್ತು ಹೊಸದಾಗಿ ಪಟ್ಟಿ ಮಾಡಿದ ಮನೆಗಳು",
+    "home.featuredHomesBody": "ಈ ಲಿಸ್ಟಿಂಗ್ ವಿಭಾಗಗಳನ್ನು ಸರಳವಾಗಿಡಲಾಗಿದೆ ಆದ್ದರಿಂದ ನೀವು ಶೋಧದಿಂದ ನೋಂದಣಿ, ಶಾರ್ಟ್‌ಲಿಸ್ಟ್ ಮತ್ತು ಪಾವತಿಯವರೆಗೆ ತ್ವರಿತವಾಗಿ ಹೋಗಬಹುದು.",
+    "home.trendingNow": "ಈಗ ಟ್ರೆಂಡಿಂಗ್",
+    "home.freshlyListed": "ಹೊಸದಾಗಿ ಪಟ್ಟಿಯಾದವು",
+    "auth.listYourProperty": "ನಿಮ್ಮ ಆಸ್ತಿಯನ್ನು ಪಟ್ಟಿ ಮಾಡಿ",
+    "auth.signIn": "ಸೈನ್ ಇನ್",
+    "auth.registration": "ನೋಂದಣಿ",
     "common.loading": "ಲೋಡ್ ಆಗುತ್ತಿದೆ…",
     "common.error": "ಏನೋ ತಪ್ಪಾಗಿದೆ",
     "common.retry": "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
@@ -353,9 +462,36 @@ export const dictionaries: Dictionary = {
     "tenant.recommended": "பரிந்துரைக்கப்படுகிறது",
     "tenant.profileCompletion": "சுயவிவர நிறைவு",
     "tenant.alerts": "எச்சரிக்கைகள்",
-    "hero.title": "உங்கள் நம்பிக்கையைப் பெறும் வீட்டைக் கண்டறியவும்",
-    "hero.subtitle": "சரிபார்க்கப்பட்ட உரிமையாளர்கள், வெளிப்படையான பட்டியல்கள், தரகர் விளையாட்டுகள் இல்லை.",
+    "hero.title": "நேரத்தையோ தெளிவையோ இழக்காமல் சரியான வாடகை வீட்டைக் கண்டறியவும்.",
+    "hero.subtitle": "சரிபார்க்கப்பட்ட வீடுகளைத் தேடுங்கள், விரைவாகப் பதிவு செய்யுங்கள், மற்றும் ஒரே இடத்திலிருந்து ஆன்போர்டிங், வருகைகள் மற்றும் கட்டணங்களைத் தொடரவும்.",
     "hero.searchCta": "வாடகைகளை உலாவவும்",
+    "hero.eyebrow": "நம்பிக்கை-முதலிட வாடகைகள்",
+    "hero.ctaSearchHomes": "வீடுகளைத் தேடு",
+    "hero.ctaRegistration": "பதிவு",
+    "hero.ctaListYourHome": "உங்கள் வீட்டைப் பட்டியலிடுங்கள்",
+    "hero.cityLive": "நகரம் நேரடி",
+    "hero.verifiedPicks": "சரிபார்க்கப்பட்ட தேர்வுகள்",
+    "hero.newListings": "புதிய பட்டியல்கள்",
+    "home.whyEyebrow": "மக்கள் ஏன் Rent and Beyond ஐப் பயன்படுத்துகிறார்கள்",
+    "home.verifiedHomesTitle": "சரிபார்க்கப்பட்ட வீடுகள்",
+    "home.verifiedHomesBody": "ஒரு சொத்தில் நேரத்தைச் செலவிடுவதற்கு முன்பு நம்பிக்கை அறிகுறிகளைப் பாருங்கள்.",
+    "home.cityBasedSearchTitle": "நகரம்-அடிப்படை தேடல்",
+    "home.cityBasedSearchBody": "நீங்கள் உண்மையில் விரும்பும் நகரம் மற்றும் பகுதியிலிருந்து தொடங்குங்கள்.",
+    "home.guidedSetupTitle": "வழிகாட்டப்பட்ட அமைப்பு",
+    "home.guidedSetupBody": "பதிவு, ஆன்போர்டிங் மற்றும் கட்டணங்கள் இணைக்கப்பட்டிருக்கும்.",
+    "home.recommendedProperty": "பரிந்துரைக்கப்பட்ட சொத்து",
+    "home.match": "பொருத்தம்",
+    "home.viewProperty": "சொத்தைப் பார்",
+    "home.exploreCitiesEyebrow": "நகரங்களை ஆராயுங்கள்",
+    "home.exploreCitiesBody": "முக்கிய அறிமுக நகரங்களை உலாவவும், பிறகு அதே கணக்கு மற்றும் கட்டண பயணத்துடன் தேடல் மற்றும் சொத்து விவரங்களுக்குச் செல்லவும்.",
+    "home.featuredHomesEyebrow": "சிறப்பு வீடுகள்",
+    "home.featuredHomesTitle": "டிரெண்டிங் மற்றும் புதிதாக பட்டியலிடப்பட்ட வீடுகள்",
+    "home.featuredHomesBody": "இந்த பட்டியல் பிரிவுகள் எளிமையாக வைக்கப்பட்டுள்ளன, இதனால் நீங்கள் கண்டுபிடிப்பிலிருந்து பதிவு, ஷார்ட்லிஸ்ட் மற்றும் கட்டணம் வரை விரைவாக நகரலாம்.",
+    "home.trendingNow": "இப்போது டிரெண்டிங்",
+    "home.freshlyListed": "புதிதாக பட்டியலிடப்பட்டது",
+    "auth.listYourProperty": "உங்கள் சொத்தைப் பட்டியலிடுங்கள்",
+    "auth.signIn": "உள்நுழை",
+    "auth.registration": "பதிவு",
     "common.loading": "ஏற்றுகிறது…",
     "common.error": "ஏதோ தவறு நடந்துவிட்டது",
     "common.retry": "மீண்டும் முயற்சி செய்",
