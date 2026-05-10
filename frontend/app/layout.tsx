@@ -4,6 +4,7 @@ import { SiteChrome } from "@/components/ui/site-chrome";
 import { ServiceWorkerRegistrar } from "@/components/ui/service-worker-registrar";
 import { OnboardingTour } from "@/components/ui/onboarding-tour";
 import { HtmlLangSync } from "@/components/ui/html-lang-sync";
+import { AutoTranslator } from "@/components/ui/auto-translator";
 import { Providers } from "@/app/providers";
 import "@/app/globals.css";
 
@@ -72,6 +73,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <ServiceWorkerRegistrar />
         <OnboardingTour />
         <HtmlLangSync />
+        <AutoTranslator />
       </body>
     </html>
   );
