@@ -28,5 +28,8 @@ ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+# Critical: Next.js standalone output does NOT include public/ — copy it
+# explicitly so logo.svg, manifest.json, icons, sw.js, etc. are served.
+COPY --from=builder /app/public ./public
 EXPOSE 3000
 CMD ["node", "server.js"]
