@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Rent Beyond">
+  <!-- Brand: deep navy ground + warm copper accent + cream cut-outs.
+       Designed to read at 32px (avatar size) and stay sharp at 192px. -->
+
+  <!-- Navy rounded square — matches the brand bg-navy tile colour. -->
+  <rect x="0" y="0" width="120" height="120" rx="22" fill="#1B2A4E"/>
+
+  <!-- Subtle inner glow to give the tile depth, not flat. -->
+  <rect x="0" y="0" width="120" height="120" rx="22" fill="url(#vignette)" opacity="0.35"/>
+
+  <!-- Copper trust-star, top-left quadrant. -->
+  <path d="M30 26 l3 7 l7 1 l-5 4 l1 7 l-6 -3 l-6 3 l1 -7 l-5 -4 l7 -1 z" fill="#D4A85A"/>
+
+  <!-- House silhouette in warm cream. Rounded ridge + clean walls. -->
+  <path d="M30 70 L60 38 L90 70 L90 96 L30 96 Z"
+        fill="#F5F1E8" stroke="#F5F1E8" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+
+  <!-- Door — taller, slightly arched at top for warmth. -->
+  <path d="M54 96 L54 78 Q60 72 66 78 L66 96 Z" fill="#1B2A4E"/>
+  <!-- Tiny door-knob in copper. -->
+  <circle cx="63" cy="88" r="1.6" fill="#D4A85A"/>
+
+  <!-- Left window. -->
+  <rect x="38" y="76" width="9" height="9" rx="1.2" fill="#1B2A4E"/>
+  <!-- Right window. -->
+  <rect x="73" y="76" width="9" height="9" rx="1.2" fill="#1B2A4E"/>
+
+  <!-- Key over the chimney area — small wordmark anchor. -->
+  <g transform="translate(78 30) rotate(35)">
+    <circle cx="0" cy="0" r="4.5" fill="none" stroke="#F5F1E8" stroke-width="2"/>
+    <rect x="4" y="-1" width="9" height="2" fill="#F5F1E8"/>
+    <rect x="10" y="0.5" width="2" height="3" fill="#F5F1E8"/>
+    <rect x="12" y="0.5" width="2" height="3" fill="#F5F1E8"/>
+  </g>
+
+  <defs>
+    <radialGradient id="vignette" cx="50%" cy="100%" r="80%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.6"/>
+    </radialGradient>
+  </defs>
+</svg>

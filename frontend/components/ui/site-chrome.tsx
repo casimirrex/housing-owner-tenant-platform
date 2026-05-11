@@ -62,37 +62,54 @@ function getInitials(fullName?: string | null, email?: string | null) {
 }
 
 /**
- * Brand logo — bulletproof against missing /logo.png.
+ * Brand logo — three layers, each falling back to the next:
  *
- * Renders the styled "RB" tile by default. An <img> sits transparent on top
- * of it; only when `onLoad` fires do we fade the image in. If /logo.png is
- * missing, returns 404, or fails to decode for any reason, `onLoad` never
- * fires and the RB tile stays visible — no broken-image icon, no alt-text
- * leak. Empty `alt` makes the image purely decorative since "Rent Beyond"
- * already appears as visible text next to it.
+ *   1. /logo.png  (user-supplied override; uploads via scp / git)
+ *   2. /logo.svg  (in-repo default; always present)
+ *   3. "RB" tile  (last-resort fallback if both images fail to load)
+ *
+ * Renders all three stacked; the topmost one that successfully loads is
+ * shown via opacity transitions. If a higher layer fails to load, its
+ * opacity stays at 0 and the layer below shows through. Net effect: the
+ * header is never blank, never broken.
  */
 function BrandLogo({ size = 48, textSize = "text-xs" }: { size?: number; textSize?: string }) {
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [pngLoaded, setPngLoaded] = useState(false);
+  const [svgLoaded, setSvgLoaded] = useState(false);
 
   return (
     <div
       className="relative overflow-hidden rounded-xl bg-navy"
       style={{ width: size, height: size }}
     >
+      {/* Layer 3: always-visible RB tile (last-resort fallback) */}
       <div
-        className={`flex h-full w-full items-center justify-center font-bold uppercase tracking-[0.28em] text-oat ${textSize}`}
+        className={`absolute inset-0 flex items-center justify-center font-bold uppercase tracking-[0.28em] text-oat ${textSize}`}
         aria-hidden
       >
         RB
       </div>
+
+      {/* Layer 2: in-repo SVG default — overrides RB tile once loaded */}
+      <img
+        src="/logo.svg"
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity"
+        style={{ opacity: svgLoaded ? 1 : 0 }}
+        onLoad={() => setSvgLoaded(true)}
+        onError={() => setSvgLoaded(false)}
+      />
+
+      {/* Layer 1: user-uploaded PNG — overrides SVG once loaded */}
       <img
         src="/logo.png"
         alt=""
         aria-hidden
         className="pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity"
-        style={{ opacity: imageLoaded ? 1 : 0 }}
-        onLoad={() => setImageLoaded(true)}
-        onError={() => setImageLoaded(false)}
+        style={{ opacity: pngLoaded ? 1 : 0 }}
+        onLoad={() => setPngLoaded(true)}
+        onError={() => setPngLoaded(false)}
       />
     </div>
   );
