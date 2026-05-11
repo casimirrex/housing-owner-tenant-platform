@@ -3,11 +3,11 @@ import type { Metadata, Viewport } from "next";
 import { SiteChrome } from "@/components/ui/site-chrome";
 import { ServiceWorkerRegistrar } from "@/components/ui/service-worker-registrar";
 import { OnboardingTour } from "@/components/ui/onboarding-tour";
-import { HtmlLangSync } from "@/components/ui/html-lang-sync";
-// AutoTranslator is no longer mounted — replaced by Google Translate widget
-// which translates the entire DOM (including content not in our dictionary).
-// Keeping the import would cause a double-translate conflict.
-import { GoogleTranslateInit } from "@/components/ui/google-translate-init";
+// Reverted to dictionary-based AutoTranslator after Google Translate widget
+// caused visible Chrome translate prompts + blank-page issues on some routes.
+// AutoTranslator runs invisibly — translates strings in our content
+// dictionary (~330 entries today; expand as needed).
+import { AutoTranslator } from "@/components/ui/auto-translator";
 import { CookieConsent } from "@/components/ui/cookie-consent";
 import { Providers } from "@/app/providers";
 import "@/app/globals.css";
@@ -61,7 +61,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    // translate="no" + class="notranslate" together tell Chrome to never
+    // offer its built-in translation toolbar on top of our widget.
+    // We keep lang fixed at "en" so Chrome doesn't see a foreign-lang page.
+    <html lang="en" translate="no" className="notranslate">
       <head>
         {/* Disable Chrome's built-in "Translate this page" prompt — our
             own widget handles translation, no need for browser overlap. */}
@@ -79,8 +82,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </Providers>
         <ServiceWorkerRegistrar />
         <OnboardingTour />
-        <HtmlLangSync />
-        <GoogleTranslateInit />
+        <AutoTranslator />
         <CookieConsent />
       </body>
     </html>
