@@ -62,35 +62,39 @@ function getInitials(fullName?: string | null, email?: string | null) {
 }
 
 /**
- * Brand logo with a graceful fallback.
+ * Brand logo — bulletproof against missing /logo.png.
  *
- * Tries to load /logo.png first. If the request 404s or the image fails to
- * decode, swaps to the styled "RB" tile so the header never shows a broken
- * image icon. Pure React state — no DOM hacks, no flicker once mounted.
+ * Renders the styled "RB" tile by default. An <img> sits transparent on top
+ * of it; only when `onLoad` fires do we fade the image in. If /logo.png is
+ * missing, returns 404, or fails to decode for any reason, `onLoad` never
+ * fires and the RB tile stays visible — no broken-image icon, no alt-text
+ * leak. Empty `alt` makes the image purely decorative since "Rent Beyond"
+ * already appears as visible text next to it.
  */
 function BrandLogo({ size = 48, textSize = "text-xs" }: { size?: number; textSize?: string }) {
-  const [broken, setBroken] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
-  if (broken) {
-    return (
+  return (
+    <div
+      className="relative overflow-hidden rounded-xl bg-navy"
+      style={{ width: size, height: size }}
+    >
       <div
-        className={`flex items-center justify-center rounded-xl bg-navy font-bold uppercase tracking-[0.28em] text-oat ${textSize}`}
-        style={{ width: size, height: size }}
+        className={`flex h-full w-full items-center justify-center font-bold uppercase tracking-[0.28em] text-oat ${textSize}`}
         aria-hidden
       >
         RB
       </div>
-    );
-  }
-
-  return (
-    <img
-      src="/logo.png"
-      alt="Rent Beyond"
-      className="rounded-xl object-cover"
-      style={{ width: size, height: size }}
-      onError={() => setBroken(true)}
-    />
+      <img
+        src="/logo.png"
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity"
+        style={{ opacity: imageLoaded ? 1 : 0 }}
+        onLoad={() => setImageLoaded(true)}
+        onError={() => setImageLoaded(false)}
+      />
+    </div>
   );
 }
 
