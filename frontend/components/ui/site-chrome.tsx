@@ -61,6 +61,39 @@ function getInitials(fullName?: string | null, email?: string | null) {
   return initials || label.slice(0, 2).toUpperCase();
 }
 
+/**
+ * Brand logo with a graceful fallback.
+ *
+ * Tries to load /logo.png first. If the request 404s or the image fails to
+ * decode, swaps to the styled "RB" tile so the header never shows a broken
+ * image icon. Pure React state — no DOM hacks, no flicker once mounted.
+ */
+function BrandLogo({ size = 48, textSize = "text-xs" }: { size?: number; textSize?: string }) {
+  const [broken, setBroken] = useState(false);
+
+  if (broken) {
+    return (
+      <div
+        className={`flex items-center justify-center rounded-xl bg-navy font-bold uppercase tracking-[0.28em] text-oat ${textSize}`}
+        style={{ width: size, height: size }}
+        aria-hidden
+      >
+        RB
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src="/logo.png"
+      alt="Rent Beyond"
+      className="rounded-xl object-cover"
+      style={{ width: size, height: size }}
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
 function AccountAvatar({
   fullName,
   email,
@@ -220,26 +253,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
         <div className="mx-auto max-w-7xl rounded-2xl border border-black/6 bg-white/95 px-4 py-4 shadow-soft backdrop-blur md:px-6">
           <div className="flex flex-wrap items-center justify-between gap-5">
             <Link className="group flex items-center gap-3.5" href="/">
-              <img
-                src="/logo.png"
-                alt="Rent Beyond"
-                className="h-12 w-12 rounded-xl object-cover"
-                onError={(event) => {
-                  // Fallback to the styled "RB" tile if the uploaded logo is
-                  // missing — keeps the header from breaking visually until
-                  // /public/logo.png is in place on the VPS.
-                  const el = event.currentTarget;
-                  el.style.display = "none";
-                  const sib = el.nextElementSibling as HTMLElement | null;
-                  if (sib) sib.style.display = "flex";
-                }}
-              />
-              <div
-                className="hidden h-12 w-12 items-center justify-center rounded-xl bg-navy text-xs font-bold uppercase tracking-[0.28em] text-oat"
-                aria-hidden
-              >
-                RB
-              </div>
+              <BrandLogo size={48} textSize="text-xs" />
               <div>
                 <p className="font-serif text-[1.65rem] font-semibold leading-none tracking-[-0.01em] text-navy">
                   Rent Beyond
@@ -294,23 +308,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
             <div className="grid gap-8 md:grid-cols-[1.3fr_0.85fr_0.85fr]">
               <div>
                 <div className="flex items-center gap-3">
-                  <img
-                    src="/logo.png"
-                    alt="Rent Beyond"
-                    className="h-10 w-10 rounded-xl object-cover"
-                    onError={(event) => {
-                      const el = event.currentTarget;
-                      el.style.display = "none";
-                      const sib = el.nextElementSibling as HTMLElement | null;
-                      if (sib) sib.style.display = "flex";
-                    }}
-                  />
-                  <div
-                    className="hidden h-10 w-10 items-center justify-center rounded-xl bg-navy text-[10px] font-bold uppercase tracking-widest text-oat"
-                    aria-hidden
-                  >
-                    RB
-                  </div>
+                  <BrandLogo size={40} textSize="text-[10px]" />
                   <p className="font-serif text-xl font-semibold text-navy">Rent Beyond</p>
                 </div>
                 <p className="mt-5 max-w-md font-serif text-2xl leading-snug text-ink md:text-[1.75rem]">
