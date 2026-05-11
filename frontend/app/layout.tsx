@@ -63,6 +63,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
+        {/* Disable Chrome's built-in "Translate this page" prompt — our
+            own widget handles translation, no need for browser overlap. */}
+        <meta name="google" content="notranslate" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

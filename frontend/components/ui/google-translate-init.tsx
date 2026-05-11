@@ -76,6 +76,33 @@ export function GoogleTranslateInit() {
         };
         document.body.appendChild(script);
       }
+
+      // Defensive cleanup: any UI Google sneaks in that our CSS didn't
+      // catch gets purged on a 600ms tick. This catches edge cases where
+      // Google's widget injects elements after our stylesheet has applied.
+      const purge = () => {
+        try {
+          [
+            ".goog-te-banner-frame",
+            ".goog-te-balloon-frame",
+            ".goog-te-menu-frame",
+            "iframe.goog-te-menu-frame",
+            'iframe[src*="translate.google"]',
+            ".goog-tooltip",
+            ".goog-te-spinner-pos"
+          ].forEach((sel) => {
+            document.querySelectorAll(sel).forEach((el) => el.remove());
+          });
+          // Body offset Google sometimes pushes inline
+          if (document.body.style.top) document.body.style.top = "0";
+        } catch {
+          /* ignore — purge is best-effort */
+        }
+      };
+      const interval = window.setInterval(purge, 600);
+      window.setTimeout(purge, 100);
+      // Stop tidying after 10s; by then Google has finished mounting.
+      window.setTimeout(() => window.clearInterval(interval), 10_000);
     } catch (err) {
       console.warn("[google-translate] setup failed", err);
     }

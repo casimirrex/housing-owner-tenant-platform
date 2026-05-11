@@ -607,31 +607,58 @@ footer,
   }
 }
 
-/* ─── Google Translate widget cleanup (scoped, layout-safe) ─────────────
- * Only target Google's own classes — never blanket-style body/iframe so
- * we don't break the rest of the site if the widget fails to load. */
+/* ─── Google Translate widget — hide ALL UI traces ──────────────────────
+ * Translation runs invisibly under the cover of our own LocaleSwitcher.
+ * No Google banner, no Google dropdown, no Google tooltips, no Google
+ * loading spinners. Translation just happens. */
 .goog-te-banner-frame,
-.goog-te-banner-frame.skiptranslate {
+.goog-te-banner-frame.skiptranslate,
+.goog-te-balloon-frame,
+.goog-te-ftab,
+.goog-te-menu-frame,
+.goog-te-menu-value,
+.goog-te-gadget,
+.goog-te-gadget-icon,
+.goog-te-spinner-pos,
+.goog-te-spinner-img,
+.goog-tooltip,
+.goog-tooltip:hover,
+.goog-text-highlight,
+.goog-logo-link,
+iframe.goog-te-menu-frame,
+iframe.goog-te-banner-frame,
+iframe[src*="translate.google"] {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
+
+/* The injection point we expose for the widget — keep it off-screen and
+ * uninteractable so even if Google's CSS leaks, the user never sees it. */
+#google_translate_element {
+  position: fixed !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
 /* Google adds `top: 40px` to body via inline style when its banner is up.
- * We hide the banner, so neutralize the offset — only when Google's class
- * is actually present, to keep this rule from touching layouts that have
- * never seen the widget. */
+ * We've hidden the banner, so neutralize the offset — scoped to bodies
+ * Google has actually translated. */
 body.translated-ltr,
 body.translated-rtl {
   top: 0 !important;
-}
-.goog-tooltip,
-.goog-tooltip:hover,
-.goog-text-highlight {
-  display: none !important;
-  background-color: transparent !important;
-  box-shadow: none !important;
-}
-.goog-logo-link,
-.goog-te-gadget {
-  font-size: 0 !important;
 }
 .goog-te-gadget .goog-te-combo {
   display: none !important;
