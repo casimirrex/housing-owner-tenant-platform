@@ -606,3 +606,32 @@ footer,
       0 1px 0 rgba(255,255,255,0.95) inset;
   }
 }
+
+/* ─── Google Translate widget cleanup ────────────────────────────────────
+ * The widget injects a banner iframe at the top of the page plus tooltips
+ * showing original English on hover. We hide both — our own LocaleSwitcher
+ * provides the UI, hover tooltips would clobber custom layout. */
+.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+iframe.skiptranslate {
+  display: none !important;
+}
+body {
+  /* Banner normally adds 40px top offset; we hid the banner so reset it */
+  top: 0 !important;
+  position: static !important;
+}
+.goog-tooltip,
+.goog-tooltip:hover,
+.goog-text-highlight {
+  display: none !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+.goog-logo-link,
+.goog-te-gadget {
+  font-size: 0 !important;
+}
+.goog-te-gadget .goog-te-combo {
+  display: none !important;
+}

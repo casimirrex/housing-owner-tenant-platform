@@ -4,7 +4,10 @@ import { SiteChrome } from "@/components/ui/site-chrome";
 import { ServiceWorkerRegistrar } from "@/components/ui/service-worker-registrar";
 import { OnboardingTour } from "@/components/ui/onboarding-tour";
 import { HtmlLangSync } from "@/components/ui/html-lang-sync";
-import { AutoTranslator } from "@/components/ui/auto-translator";
+// AutoTranslator is no longer mounted — replaced by Google Translate widget
+// which translates the entire DOM (including content not in our dictionary).
+// Keeping the import would cause a double-translate conflict.
+import { GoogleTranslateInit } from "@/components/ui/google-translate-init";
 import { CookieConsent } from "@/components/ui/cookie-consent";
 import { Providers } from "@/app/providers";
 import "@/app/globals.css";
@@ -74,7 +77,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <ServiceWorkerRegistrar />
         <OnboardingTour />
         <HtmlLangSync />
-        <AutoTranslator />
+        <GoogleTranslateInit />
         <CookieConsent />
       </body>
     </html>
