@@ -607,19 +607,20 @@ footer,
   }
 }
 
-/* ─── Google Translate widget cleanup ────────────────────────────────────
- * The widget injects a banner iframe at the top of the page plus tooltips
- * showing original English on hover. We hide both — our own LocaleSwitcher
- * provides the UI, hover tooltips would clobber custom layout. */
+/* ─── Google Translate widget cleanup (scoped, layout-safe) ─────────────
+ * Only target Google's own classes — never blanket-style body/iframe so
+ * we don't break the rest of the site if the widget fails to load. */
 .goog-te-banner-frame,
-.goog-te-banner-frame.skiptranslate,
-iframe.skiptranslate {
+.goog-te-banner-frame.skiptranslate {
   display: none !important;
 }
-body {
-  /* Banner normally adds 40px top offset; we hid the banner so reset it */
+/* Google adds `top: 40px` to body via inline style when its banner is up.
+ * We hide the banner, so neutralize the offset — only when Google's class
+ * is actually present, to keep this rule from touching layouts that have
+ * never seen the widget. */
+body.translated-ltr,
+body.translated-rtl {
   top: 0 !important;
-  position: static !important;
 }
 .goog-tooltip,
 .goog-tooltip:hover,

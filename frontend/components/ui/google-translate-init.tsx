@@ -44,35 +44,40 @@ export function GoogleTranslateInit() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // The script calls this on load — declared on window first so it
-    // always exists by the time the script invokes it.
-    window.googleTranslateElementInit = () => {
-      const g = (window as unknown as { google?: GoogleTranslateGlobal }).google?.translate;
-      if (!g) return;
-      try {
-        new g.TranslateElement(
-          {
-            pageLanguage: "en",
-            // Supported target languages we expose in our LocaleSwitcher.
-            includedLanguages: "hi,kn,ta",
-            // Hide Google's banner — we provide our own LocaleSwitcher.
-            autoDisplay: false
-          },
-          "google_translate_element"
-        );
-      } catch (err) {
-        console.warn("[google-translate] init failed", err);
-      }
-    };
+    // Run everything inside a giant try/catch so a Google script failure
+    // can never crash React's render tree. We've seen reports of blank
+    // pages when the upstream widget throws; this hardens against that.
+    try {
+      window.googleTranslateElementInit = () => {
+        try {
+          const g = (window as unknown as { google?: GoogleTranslateGlobal }).google?.translate;
+          if (!g) return;
+          new g.TranslateElement(
+            {
+              pageLanguage: "en",
+              includedLanguages: "hi,kn,ta",
+              autoDisplay: false
+            },
+            "google_translate_element"
+          );
+        } catch (err) {
+          console.warn("[google-translate] init callback failed", err);
+        }
+      };
 
-    // Avoid double-loading the script on client-side route changes.
-    if (!document.getElementById("gtranslate-script")) {
-      const script = document.createElement("script");
-      script.id = "gtranslate-script";
-      script.src =
-        "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
-      script.async = true;
-      document.body.appendChild(script);
+      if (!document.getElementById("gtranslate-script")) {
+        const script = document.createElement("script");
+        script.id = "gtranslate-script";
+        script.src =
+          "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+        script.async = true;
+        script.onerror = (e) => {
+          console.warn("[google-translate] script failed to load", e);
+        };
+        document.body.appendChild(script);
+      }
+    } catch (err) {
+      console.warn("[google-translate] setup failed", err);
     }
   }, []);
 
