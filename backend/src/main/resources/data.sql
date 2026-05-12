@@ -581,12 +581,21 @@ ON CONFLICT (alias) DO NOTHING;
 
 -- Tier 1: bootstrap an admin if none exists. Default tester user_1a2b3c4d
 -- is promoted only when there is no other ADMIN.
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM users WHERE role = 'ADMIN') THEN
-    UPDATE users SET role = 'ADMIN' WHERE user_id = 'user_1a2b3c4d';
-    INSERT INTO user_roles (user_id, role, granted_at)
-    VALUES ('user_1a2b3c4d', 'ADMIN', CURRENT_TIMESTAMP)
-    ON CONFLICT (user_id, role) DO NOTHING;
-  END IF;
-END $$;
+--
+-- Rewritten from a DO $$ ... $$ PL/pgSQL block to plain SQL because Spring
+-- Boot's ScriptUtils.executeSqlScript() splits on ';' and treats the
+-- semicolons inside the DO block as statement terminators, leaving the
+-- $$ unterminated. Two standard-SQL statements achieve the same
+-- idempotent semantics and parse cleanly.
+
+-- Promote the default tester to ADMIN ONLY if no admin exists yet.
+UPDATE users SET role = 'ADMIN'
+WHERE user_id = 'user_1a2b3c4d'
+  AND NOT EXISTS (SELECT 1 FROM users u2 WHERE u2.role = 'ADMIN');
+
+-- Mirror the role entry into user_roles. Idempotent via NOT EXISTS.
+INSERT INTO user_roles (user_id, role, granted_at)
+SELECT 'user_1a2b3c4d', 'ADMIN', CURRENT_TIMESTAMP
+WHERE NOT EXISTS (
+  SELECT 1 FROM user_roles WHERE user_id = 'user_1a2b3c4d' AND role = 'ADMIN'
+);
