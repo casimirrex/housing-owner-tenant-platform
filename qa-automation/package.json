@@ -9,6 +9,8 @@
     "test:e2e": "playwright test --project=chromium-e2e",
     "test:api": "playwright test --project=api",
     "test:a11y": "playwright test --project=a11y",
+    "test:visual": "playwright test --project=visual",
+    "test:visual:update": "playwright test --project=visual --update-snapshots",
     "test:i18n": "playwright test tests/e2e/i18n",
     "test:admin": "playwright test tests/e2e/admin",
     "test:headed": "playwright test --headed",

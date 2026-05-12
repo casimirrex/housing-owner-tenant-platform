@@ -115,6 +115,35 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] }
     },
 
+    // ── Visual regression (Option C). ──
+    //
+    // Snapshots are stored alongside spec files in __snapshots__/. Baselines
+    // are Linux-only (Playwright Docker image) to eliminate cross-OS font
+    // antialiasing diff. Devs update via:
+    //     npx playwright test --project=visual --update-snapshots
+    // and commit the resulting PNGs in their PR.
+    //
+    // Threshold: 1% pixel-ratio tolerance + 100 raw-pixel allowance per
+    // assertion. Tweak per-assertion via `.toHaveScreenshot({ maxDiffPixelRatio })`.
+    {
+      name: "visual",
+      testMatch: /tests\/visual\/.*\.visual\.spec\.ts/,
+      dependencies: ["auth-setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 900 } // stable canvas
+      },
+      expect: {
+        toHaveScreenshot: {
+          maxDiffPixelRatio: 0.01,
+          maxDiffPixels: 100,
+          animations: "disabled",
+          // CSS-level mask color (default magenta — keep it visible)
+          stylePath: undefined
+        }
+      }
+    },
+
     // ── Mobile viewport sanity (re-runs the smoke suite). ──
     {
       name: "mobile-chrome",

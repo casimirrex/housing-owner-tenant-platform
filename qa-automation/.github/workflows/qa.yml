@@ -165,3 +165,53 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:a11y
+
+  # ── Tier 4: visual regression — runs nightly, after E2E. ──
+  visual:
+    name: Visual regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: [e2e-regression]
+    # Use Playwright's Docker image directly so baselines stay byte-stable
+    # vs the runtime — no host font differences possible.
+    container:
+      image: mcr.microsoft.com/playwright:v1.49.0-jammy
+
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - name: Run visual regression
+        run: npx playwright test --project=visual
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diff-report
+          path: qa-automation/playwright-report/
+          retention-days: 14
+        # Failing artifact has 3 images per regression: baseline, actual, diff.
+        # Open the index.html to triage.
+
+  # ── On-demand: update visual baselines and open a PR with the diff. ──
+  visual-update:
+    name: Update visual baselines (manual)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    container:
+      image: mcr.microsoft.com/playwright:v1.49.0-jammy
+
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npx playwright test --project=visual --update-snapshots
+      - name: Commit updated snapshots
+        run: |
+          git config user.name "qa-bot"
+          git config user.email "qa-bot@testition.tech"
+          git add qa-automation/tests/visual/**/*.png
+          git diff --cached --quiet || git commit -m "visual: update snapshots (manual run)"
+      - uses: peter-evans/create-pull-request@v6
+        with:
+          branch: visual/update-snapshots
+          title: "visual: update snapshots"
+          body: "Manual snapshot refresh. Review the diff before merging."
