@@ -1,0 +1,86 @@
+name: Performance (k6)
+
+on:
+  schedule:
+    # Weekly load test — Monday 03:00 IST (21:30 UTC Sunday)
+    - cron: "30 21 * * 0"
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "Which scenario to run"
+        required: true
+        default: "load-search"
+        type: choice
+        options:
+          - smoke
+          - load-search
+          - load-login
+          - load-wallet
+          - stress
+          - spike
+          - soak
+      env:
+        description: "Target environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - local
+
+jobs:
+  perf:
+    name: ${{ github.event.inputs.scenario || 'load-search' }} on ${{ github.event.inputs.env || 'staging' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install k6 official binary (one apt-get install)
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+          k6 version
+
+      - name: Run perf scenario
+        working-directory: qa-automation/perf
+        env:
+          ENV: ${{ github.event.inputs.env || 'staging' }}
+          STAGING_API_BASE: ${{ secrets.STAGING_API_BASE }}
+          STAGING_TENANT_EMAIL: ${{ secrets.STAGING_TENANT_EMAIL }}
+          STAGING_TENANT_PASSWORD: ${{ secrets.STAGING_TENANT_PASSWORD }}
+        run: |
+          SCENARIO="${{ github.event.inputs.scenario || 'load-search' }}"
+          k6 run \
+            --summary-export=summary.json \
+            --out json=metrics.json \
+            scenarios/${SCENARIO}.js
+
+      - name: Upload k6 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-${{ github.event.inputs.scenario || 'load-search' }}
+          path: |
+            qa-automation/perf/summary.json
+            qa-automation/perf/metrics.json
+          retention-days: 30
+
+      - name: Post threshold breaches as job summary
+        if: always()
+        working-directory: qa-automation/perf
+        run: |
+          echo "## Perf scenario: ${{ github.event.inputs.scenario || 'load-search' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f summary.json ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat summary.json | head -120 >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi

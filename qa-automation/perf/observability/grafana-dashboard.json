@@ -1,0 +1,67 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "schemaVersion": 38,
+  "version": 1,
+  "title": "k6 — Testition perf dashboard",
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Requests per second (by endpoint)",
+      "type": "timeseries",
+      "datasource": { "type": "influxdb", "uid": "InfluxDB-k6" },
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "rawQuery": true,
+          "query": "SELECT non_negative_derivative(mean(\"value\"), 1s) AS rps FROM \"http_reqs\" WHERE $timeFilter GROUP BY time(5s), \"endpoint\" fill(null)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "p95 latency (ms) by endpoint",
+      "type": "timeseries",
+      "datasource": { "type": "influxdb", "uid": "InfluxDB-k6" },
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "rawQuery": true,
+          "query": "SELECT percentile(\"value\", 95) FROM \"http_req_duration\" WHERE $timeFilter GROUP BY time(10s), \"endpoint\" fill(null)",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Error rate (%)",
+      "type": "timeseries",
+      "datasource": { "type": "influxdb", "uid": "InfluxDB-k6" },
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "rawQuery": true,
+          "query": "SELECT mean(\"value\") * 100 FROM \"http_req_failed\" WHERE $timeFilter GROUP BY time(10s) fill(null)",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Active virtual users",
+      "type": "timeseries",
+      "datasource": { "type": "influxdb", "uid": "InfluxDB-k6" },
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "rawQuery": true,
+          "query": "SELECT max(\"value\") FROM \"vus\" WHERE $timeFilter GROUP BY time(5s) fill(null)",
+          "refId": "D"
+        }
+      ]
+    }
+  ]
+}

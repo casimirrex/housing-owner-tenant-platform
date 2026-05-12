@@ -1,0 +1,49 @@
+# ─── k6 → InfluxDB → Grafana live-dashboard stack ────────────────────────────
+# Run on your local machine BEFORE starting a long perf scenario:
+#
+#   docker compose -f qa-automation/perf/observability/docker-compose.yml up -d
+#   k6 run --out influxdb=http://localhost:8086/k6 perf/scenarios/load-search.js
+#   open http://localhost:3001  (Grafana — admin / admin)
+#
+# Provides a real-time dashboard of: RPS, p50/p90/p95/p99 latency per
+# endpoint, error rate, active VUs. Way better than reading k6's stdout
+# summary blob at the end.
+#
+# Tear down:
+#   docker compose -f qa-automation/perf/observability/docker-compose.yml down -v
+#
+# NOTE: This is a LOCAL dev tool — not part of CI. CI uses k6's text
+# summary + JSON output to attach to GitHub artifacts.
+services:
+  influxdb:
+    image: influxdb:1.8
+    container_name: k6-influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=k6
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+
+  grafana:
+    image: grafana/grafana:10.3.3
+    container_name: k6-grafana
+    ports:
+      - "3001:3000"        # port 3001 to avoid clash with Next.js (3000)
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana-datasource.yml:/etc/grafana/provisioning/datasources/influx.yml:ro
+      - ./grafana-dashboard.json:/etc/grafana/provisioning/dashboards/k6.json:ro
+    depends_on:
+      - influxdb
+
+volumes:
+  influxdb-data:
+  grafana-data:
