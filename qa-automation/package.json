@@ -1,0 +1,36 @@
+{
+  "name": "testition-qa-automation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Enterprise QA automation suite for Testition (Rent Beyond) — E2E, API, a11y, i18n.",
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test --project=smoke",
+    "test:e2e": "playwright test --project=chromium-e2e",
+    "test:api": "playwright test --project=api",
+    "test:a11y": "playwright test --project=a11y",
+    "test:i18n": "playwright test tests/e2e/i18n",
+    "test:admin": "playwright test tests/e2e/admin",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "trace": "playwright show-trace",
+    "codegen:local": "playwright codegen http://localhost:3000",
+    "codegen:staging": "playwright codegen https://staging.testition.tech",
+    "install:browsers": "playwright install --with-deps chromium firefox webkit",
+    "lint": "eslint . --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@axe-core/playwright": "^4.10.0",
+    "@types/node": "^22.10.0",
+    "dotenv": "^16.4.5",
+    "typescript": "^5.6.0",
+    "allure-playwright": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

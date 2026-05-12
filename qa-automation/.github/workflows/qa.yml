@@ -1,0 +1,167 @@
+name: QA Automation
+
+on:
+  pull_request:
+    paths:
+      - "frontend/**"
+      - "backend/**"
+      - "qa-automation/**"
+  push:
+    branches: [main]
+  schedule:
+    # Nightly full regression at 02:30 IST (21:00 UTC)
+    - cron: "0 21 * * *"
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: qa-automation
+
+env:
+  TEST_ENV: ci
+  BASE_URL: http://localhost:3000
+  API_BASE_URL: http://localhost:8080
+  TENANT_EMAIL: aarav@example.com
+  TENANT_PASSWORD: StrongPassword@123
+  OWNER_EMAIL: rohit.mehta@example.com
+  OWNER_PASSWORD: StrongPassword@123
+  ADMIN_EMAIL: aarav@example.com
+  ADMIN_PASSWORD: StrongPassword@123
+
+jobs:
+  # ── Tier 1: smoke + API contract — runs on every PR, fast feedback. ──
+  smoke-and-api:
+    name: Smoke + API (fast)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: housing_owner_tenant
+          POSTGRES_USER: housing
+          POSTGRES_PASSWORD: housing
+        ports: ["5432:5432"]
+        options: --health-cmd="pg_isready -U housing" --health-interval=5s --health-timeout=5s --health-retries=10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Boot Spring Boot backend
+        working-directory: backend
+        run: |
+          ./mvnw -B -q -DskipTests package
+          nohup java -jar target/*.jar --spring.profiles.active=ci > backend.log 2>&1 &
+          echo "Waiting for backend on :8080…"
+          for i in {1..60}; do
+            curl -fsS http://localhost:8080/actuator/health && break || sleep 2
+          done
+
+      - name: Boot Next.js frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+          nohup npm run start -- -p 3000 > frontend.log 2>&1 &
+          for i in {1..60}; do
+            curl -fsS http://localhost:3000 && break || sleep 2
+          done
+
+      - name: Install QA deps
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Smoke tests
+        run: npm run test:smoke
+
+      - name: API contract tests
+        run: npm run test:api
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-report-smoke-api
+          path: |
+            qa-automation/playwright-report/
+            qa-automation/test-results/
+          retention-days: 14
+
+  # ── Tier 2: full E2E — runs nightly and on main branch. ──
+  e2e-regression:
+    name: Full E2E regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: github.event_name == 'schedule' || github.ref == 'refs/heads/main'
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: housing_owner_tenant
+          POSTGRES_USER: housing
+          POSTGRES_PASSWORD: housing
+        ports: ["5432:5432"]
+        options: --health-cmd="pg_isready -U housing" --health-interval=5s --health-retries=10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium-e2e, firefox-e2e, webkit-e2e]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "21" }
+
+      # (Same backend + frontend boot steps as above — extract to composite action in real repo.)
+      - name: Boot stack (see smoke-and-api for full steps)
+        run: echo "TODO factor out into a composite action — same backend+frontend boot"
+
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - run: npx playwright test --project=${{ matrix.project }}
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-report-${{ matrix.project }}
+          path: qa-automation/playwright-report/
+          retention-days: 14
+
+  # ── Tier 3: accessibility audit — runs nightly. ──
+  a11y:
+    name: A11y (WCAG 2.1 AA)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'schedule'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:a11y
