@@ -35,9 +35,12 @@ async function login(
   expectedRedirect: RegExp
 ) {
   await page.goto("/account/login");
-  await page.getByLabel(/email/i).fill(email);
-  await page.getByLabel(/password/i).fill(password);
-  await page.getByRole("button", { name: /sign in/i }).click();
+  // Label text on the real form is "Email or phone"; password label is just
+  // "Password". Submit button reads "Login with email / phone" (mutates to
+  // "Signing in..." while pending).
+  await page.getByLabel(/email or phone|email/i).fill(email);
+  await page.getByLabel(/^password$/i).fill(password);
+  await page.getByRole("button", { name: /login with email|signing in/i }).click();
 
   // Successful login redirects away from /account/login.
   await page.waitForURL(expectedRedirect, { timeout: 20_000 });
