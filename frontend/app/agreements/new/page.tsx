@@ -3,19 +3,32 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FileSignature, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { createRentalAgreement } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth-store";
 
 /**
  * Owner-only — draft a new rental agreement.
  *
- * The owner picks a property (from their listings), enters tenant id,
- * dates, rent + deposit, optional terms. Submit creates a DRAFT.
- * Owner then clicks "Send for signatures" on the detail page to move
- * the agreement to AWAITING_SIGNATURES.
+ * useSearchParams() must live inside a <Suspense> boundary so Next.js 14's
+ * static prerender doesn't bail out at build time. We split the form into
+ * an inner component and wrap it in Suspense at the page level.
  */
 export default function NewAgreementPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto max-w-2xl px-6 py-16 text-center">
+          <Loader2 className="mx-auto h-5 w-5 animate-spin text-ink/40" />
+        </main>
+      }
+    >
+      <NewAgreementForm />
+    </Suspense>
+  );
+}
+
+function NewAgreementForm() {
   const router = useRouter();
   const params = useSearchParams();
   const session = useAuthStore((s) => s.session);
