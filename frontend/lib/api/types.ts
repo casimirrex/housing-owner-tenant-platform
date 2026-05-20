@@ -1264,3 +1264,78 @@ export interface TenantPremiumActivationResponse {
   walletBalance: number;
   message: string;
 }
+
+/* ─── Trust Bundle ──────────────────────────────────────────────────────── */
+
+export type RentabilityBand = "NEW" | "POOR" | "FAIR" | "GOOD" | "EXCELLENT";
+
+export interface RentabilitySignal {
+  label: string;
+  contribution: number;
+  detail: string | null;
+}
+
+export interface RentabilityScoreResponse {
+  userId: string;
+  score: number;
+  scoreBand: RentabilityBand;
+  displayName: string;
+  signals: RentabilitySignal[];
+  computedAt: string;
+  nextRecomputeAt: string | null;
+}
+
+export type RentalAgreementStatus =
+  | "DRAFT"
+  | "AWAITING_SIGNATURES"
+  | "ACTIVE"
+  | "EXPIRED"
+  | "TERMINATED";
+
+export interface RentalAgreementCreateBody {
+  propertyId: string;
+  tenantId: string;
+  monthlyRentPaise: number;
+  depositPaise: number;
+  leaseStartDate: string; // YYYY-MM-DD
+  leaseEndDate: string;
+  noticePeriodDays?: number;
+  additionalTerms?: string;
+}
+
+export interface RentalAgreementResponse {
+  agreementId: string;
+  propertyId: string;
+  propertyTitle: string;
+  propertyLocality: string;
+  propertyCity: string;
+  ownerId: string;
+  ownerName: string;
+  tenantId: string;
+  tenantName: string;
+  monthlyRentPaise: number;
+  depositPaise: number;
+  leaseStartDate: string;
+  leaseEndDate: string;
+  noticePeriodDays: number;
+  status: RentalAgreementStatus;
+  ownerAcceptedAt: string | null;
+  tenantAcceptedAt: string | null;
+  additionalTerms: string | null;
+  createdAt: string;
+  updatedAt: string;
+  htmlBody: string;
+}
+
+export interface RentalAgreementSummary {
+  agreementId: string;
+  propertyId: string;
+  propertyTitle: string;
+  counterpartyName: string;
+  counterpartyRole: "TENANT" | "OWNER";
+  monthlyRentPaise: number;
+  leaseStartDate: string;
+  leaseEndDate: string;
+  status: RentalAgreementStatus;
+  createdAt: string;
+}

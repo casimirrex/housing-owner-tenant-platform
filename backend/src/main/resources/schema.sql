@@ -1087,3 +1087,47 @@ CREATE TABLE account_deletion_requests (
   completed_at TIMESTAMPTZ
 );
 CREATE INDEX idx_account_deletion_status ON account_deletion_requests(status, completes_at);
+
+-- ─── Trust Bundle — Phase 1: Tenant Rentability Score ────────────────────────
+-- 0-100 score computed from on-platform behaviour: profile completion,
+-- verified contacts, lease history, review sentiment, dispute count.
+-- Recomputed nightly + on key events. Owners pay to filter by it.
+CREATE TABLE IF NOT EXISTS tenant_rentability_scores (
+  user_id           VARCHAR(64) PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
+  score             SMALLINT NOT NULL DEFAULT 50 CHECK (score BETWEEN 0 AND 100),
+  score_band        VARCHAR(16) NOT NULL DEFAULT 'NEW'
+                      CHECK (score_band IN ('NEW','FAIR','GOOD','EXCELLENT','POOR')),
+  signals           JSONB NOT NULL DEFAULT '{}'::jsonb,
+  computed_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  next_recompute_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_rentability_score      ON tenant_rentability_scores(score DESC);
+CREATE INDEX IF NOT EXISTS idx_rentability_score_band ON tenant_rentability_scores(score_band);
+
+-- ─── Trust Bundle — Phase 2: Rental Agreement ────────────────────────────────
+-- Digital rental agreement between owner + tenant. Status transitions:
+--   DRAFT → AWAITING_SIGNATURES → ACTIVE → EXPIRED | TERMINATED
+-- HTML body is rendered from template + columns; PDF export happens
+-- client-side via browser print (zero server-side library dependency).
+CREATE TABLE IF NOT EXISTS rental_agreements (
+  agreement_id        VARCHAR(64) PRIMARY KEY,
+  property_id         VARCHAR(64) NOT NULL REFERENCES listings(listing_id) ON DELETE CASCADE,
+  owner_id            VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  tenant_id           VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  monthly_rent_paise  BIGINT NOT NULL CHECK (monthly_rent_paise > 0),
+  deposit_paise       BIGINT NOT NULL CHECK (deposit_paise >= 0),
+  lease_start_date    DATE NOT NULL,
+  lease_end_date      DATE NOT NULL,
+  notice_period_days  INT NOT NULL DEFAULT 60 CHECK (notice_period_days BETWEEN 0 AND 180),
+  status              VARCHAR(24) NOT NULL DEFAULT 'DRAFT'
+                        CHECK (status IN ('DRAFT','AWAITING_SIGNATURES','ACTIVE','EXPIRED','TERMINATED')),
+  owner_accepted_at   TIMESTAMPTZ,
+  tenant_accepted_at  TIMESTAMPTZ,
+  additional_terms    TEXT,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK (lease_end_date > lease_start_date)
+);
+CREATE INDEX IF NOT EXISTS idx_agreements_property ON rental_agreements(property_id);
+CREATE INDEX IF NOT EXISTS idx_agreements_owner    ON rental_agreements(owner_id, status);
+CREATE INDEX IF NOT EXISTS idx_agreements_tenant   ON rental_agreements(tenant_id, status);

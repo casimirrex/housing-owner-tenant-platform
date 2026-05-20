@@ -1522,3 +1522,108 @@ export async function uploadListingPhoto(file: File, accessToken?: string): Prom
 
   return response.json();
 }
+
+/* ─── Trust Bundle — API methods ────────────────────────────────────────── */
+
+import type {
+  RentabilityScoreResponse,
+  RentalAgreementCreateBody,
+  RentalAgreementResponse,
+  RentalAgreementSummary
+} from "./types";
+
+export function getRentabilityScore(
+  userId: string,
+  accessToken?: string
+): Promise<RentabilityScoreResponse> {
+  return fetchJson<RentabilityScoreResponse>(
+    `/api/v1/rentability-scores/${userId}`,
+    { method: "GET" },
+    {},
+    accessToken
+  );
+}
+
+export function recomputeRentabilityScore(
+  userId: string,
+  accessToken?: string
+): Promise<RentabilityScoreResponse> {
+  return fetchJson<RentabilityScoreResponse>(
+    `/api/v1/rentability-scores/${userId}/recompute`,
+    { method: "POST" },
+    {},
+    accessToken
+  );
+}
+
+export function createRentalAgreement(
+  body: RentalAgreementCreateBody,
+  accessToken?: string
+): Promise<RentalAgreementResponse> {
+  return fetchJson<RentalAgreementResponse>(
+    `/api/v1/rental-agreements`,
+    { method: "POST", body: JSON.stringify(body) },
+    {},
+    accessToken
+  );
+}
+
+export function getRentalAgreement(
+  agreementId: string,
+  accessToken?: string
+): Promise<RentalAgreementResponse> {
+  return fetchJson<RentalAgreementResponse>(
+    `/api/v1/rental-agreements/${agreementId}`,
+    { method: "GET" },
+    {},
+    accessToken
+  );
+}
+
+export function listMyRentalAgreements(
+  role: "TENANT" | "OWNER",
+  accessToken?: string
+): Promise<RentalAgreementSummary[]> {
+  return fetchJson<RentalAgreementSummary[]>(
+    `/api/v1/rental-agreements?role=${role}`,
+    { method: "GET" },
+    {},
+    accessToken
+  );
+}
+
+export function sendRentalAgreement(
+  agreementId: string,
+  accessToken?: string
+): Promise<RentalAgreementResponse> {
+  return fetchJson<RentalAgreementResponse>(
+    `/api/v1/rental-agreements/${agreementId}/send`,
+    { method: "POST" },
+    {},
+    accessToken
+  );
+}
+
+export function acceptRentalAgreement(
+  agreementId: string,
+  accessToken?: string
+): Promise<RentalAgreementResponse> {
+  return fetchJson<RentalAgreementResponse>(
+    `/api/v1/rental-agreements/${agreementId}/accept`,
+    { method: "POST" },
+    {},
+    accessToken
+  );
+}
+
+export function terminateRentalAgreement(
+  agreementId: string,
+  accessToken?: string
+): Promise<RentalAgreementResponse> {
+  return fetchJson<RentalAgreementResponse>(
+    `/api/v1/rental-agreements/${agreementId}/terminate`,
+    { method: "POST" },
+    {},
+    accessToken
+  );
+}
